@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KeyVault AI - API Key Manager</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="app2.css">
+</head>
+<body>
+
+<!-- SVG 图标库 -->
+<svg width="0" height="0" style="position:absolute;visibility:hidden">
+  <defs>
+    <!-- 功能图标 —— 来自用户设计稿 -->
+    <symbol id="icon-home" viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 14 15 14 15 22"/><path d="M18 7.5V4h3v6"/></symbol>
+    <symbol id="icon-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="9.5" r="4.3"/><circle cx="9.5" cy="9.5" r="1.5"/><path d="M12.5 12.5l6.2 6.2"/><rect x="16.5" y="16.5" width="4.5" height="2.6" rx="1.3" transform="rotate(45 18.75 17.8)"/></symbol>
+    <symbol id="icon-chart" viewBox="0 0 24 24"><rect x="4" y="10" width="4.5" height="10" rx="1.2"/><rect x="9.75" y="5" width="4.5" height="15" rx="1.2"/><rect x="15.5" y="13" width="4.5" height="7" rx="1.2"/></symbol>
+    <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="8 12 11 15 16 10"/></symbol>
+    <symbol id="icon-gamepad" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="7"/><path d="M6 12h4"/><path d="M8 10v4"/><circle cx="15.5" cy="11.5" r="1.3"/><circle cx="18.5" cy="13.5" r="1.3"/></symbol>
+    <symbol id="icon-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></symbol>
+    <symbol id="icon-plus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></symbol>
+    <symbol id="icon-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></symbol>
+    <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6"/><path d="M14 11v6"/></symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 15V3"/><polyline points="8 11 12 15 16 11"/><rect x="4" y="15" width="16" height="5" rx="2"/></symbol>
+    <symbol id="icon-upload" viewBox="0 0 24 24"><path d="M12 9v12"/><polyline points="8 13 12 9 16 13"/><rect x="4" y="17" width="16" height="4" rx="2"/></symbol>
+    <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1.5"/></symbol>
+    <symbol id="icon-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="2.5"/></symbol>
+    <symbol id="icon-eye-off" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-3.72 3.72L3 3"/><line x1="1" y1="1" x2="23" y2="23"/></symbol>
+    <symbol id="icon-theme" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v1.5"/><path d="M12 20.5V22"/><path d="M4.93 4.93l1.06 1.06"/><path d="M17.01 17.01l1.06 1.06"/><path d="M2 12h1.5"/><path d="M20.5 12H22"/><path d="M4.93 19.07l1.06-1.06"/><path d="M17.01 6.99l1.06-1.06"/></symbol>
+    <symbol id="icon-menu" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+    <symbol id="icon-rocket" viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></symbol>
+    <symbol id="icon-arrow-right" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 10"/></symbol>
+    <symbol id="icon-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.5" r="1"/></symbol>
+    <symbol id="icon-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></symbol>
+    <symbol id="icon-folder" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><path d="M10 15l2 2 4-4"/></symbol>
+    <symbol id="icon-cloud" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></symbol>
+    <symbol id="icon-sparkle" viewBox="0 0 24 24"><path d="M12 2l1.5 5.5H19l-4.5 3 1.5 5.5L12 12l-4 4 1.5-5.5L5 7.5h5.5z"/></symbol>
+    <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></symbol>
+    <symbol id="icon-monitor" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></symbol>
+    <symbol id="icon-doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></symbol>
+    <symbol id="icon-pie" viewBox="0 0 24 24"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></symbol>
+    <symbol id="icon-coffee" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></symbol>
+    <symbol id="icon-sprout" viewBox="0 0 24 24"><path d="M12 22v-7"/><path d="M12 15c-2.5 0-5.5-.5-6.5-3 0 3 2 5.5 6.5 5.5s6.5-2.5 6.5-5.5c-1 2.5-4 3-6.5 3z"/><path d="M12 15V8"/></symbol>
+    <symbol id="icon-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
+    <symbol id="icon-lightning" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+    <symbol id="icon-tag" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="11" cy="11" r="2"/></symbol>
+    <symbol id="icon-trend" viewBox="0 0 24 24"><polyline points="3 17 8 12 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></symbol>
+    <symbol id="icon-cat" viewBox="0 0 24 24"><path d="M12 14c3.5 0 6.5-2 7-5-.5-2.5-3-4-7-4s-6.5 1.5-7 4c.5 3 3.5 5 7 5z"/><path d="M4 7l2 2 2-2"/><path d="M16 7l2 2 2-2"/><circle cx="9" cy="11" r="1"/><circle cx="15" cy="11" r="1"/><path d="M11 15h2"/></symbol>
+    <symbol id="icon-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></symbol>
+    <symbol id="icon-activity" viewBox="0 0 24 24"><path d="M3 12h4l2 7 4-15 2 8h6"/></symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></symbol>
+    <symbol id="icon-rotate" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
+
+    <!-- 状态图标 —— 来自用户设计稿 -->
+    <symbol id="icon-status-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/></symbol>
+    <symbol id="icon-status-active" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="8 12 11 15 16 10"/></symbol>
+    <symbol id="icon-status-warn" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.5" r="1.2"/></symbol>
+    <symbol id="icon-status-error" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></symbol>
+    <symbol id="icon-status-offline" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></symbol>
+    <symbol id="icon-status-new" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="icon-status-beta" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 10h3a2 2 0 0 1 0 4H8v-4z"/><line x1="9.5" y1="10" x2="9.5" y2="14"/></symbol>
+
+    <!-- Provider 品牌 Logo —— 来自用户设计稿 -->
+    <symbol id="icon-logo-openai" viewBox="0 0 24 24"><path d="M12 3c1.3 0 2.4.9 2.8 2.1.5-.4 1.1-.6 1.7-.6 1.7 0 3 1.3 3 3 0 .6-.2 1.2-.6 1.7 1.2.4 2.1 1.5 2.1 2.8 0 1.3-.9 2.4-2.1 2.8.4.5.6 1.1.6 1.7 0 1.7-1.3 3-3 3-.6 0-1.2-.2-1.7-.6-.4 1.2-1.5 2.1-2.8 2.1-1.3 0-2.4-.9-2.8-2.1-.5.4-1.1.6-1.7.6-1.7 0-3-1.3-3-3 0-.6.2-1.2.6-1.7-1.2-.4-2.1-1.5-2.1-2.8 0-1.3.9-2.4 2.1-2.8-.4-.5-.6-1.1-.6-1.7 0-1.7 1.3-3 3-3 .6 0 1.2.2 1.7.6.4-1.2 1.5-2.1 2.8-2.1z"/></symbol>
+    <symbol id="icon-logo-claude" viewBox="0 0 24 24"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/></symbol>
+    <symbol id="icon-logo-gemini" viewBox="0 0 24 24"><path d="M12 2l10 10-10 10L2 12z"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></symbol>
+    <symbol id="icon-logo-deepseek" viewBox="0 0 24 24"><path d="M3 12c3-4 6-5 9-2 2 2 5 1 7-1"/><path d="M16 6c-1 3-4 6-7 6-2 0-4 2-4 4"/><path d="M19 9c-1 4-4 7-8 7-2 0-3 2-3 3"/><path d="M20 15l-3-2"/></symbol>
+    <symbol id="icon-logo-qwen" viewBox="0 0 24 24"><path d="M12 2l10 5v10l-10 5-10-5V7z"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="7" x2="12" y2="12"/><line x1="22" y1="7" x2="12" y2="12"/></symbol>
+    <symbol id="icon-logo-other" viewBox="0 0 24 24"><circle cx="8.5" cy="8.5" r="4.5"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M12 12l6 6"/><path d="M15 15l4 4"/><path d="M18 12l-3 3"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============================================================
+     设置页面（首次使用）
+     ============================================================ -->
+<div id="setup-screen" class="screen active">
+<div class="setup-box">
+<div class="logo"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="4.5" y="10.5" width="15" height="10.5" rx="2.8" fill="currentColor"/><path d="M7 10.5V6.5a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="12" cy="16" r="1.6" fill="var(--bg3)"/></svg></div>
+<h1>KeyVault AI</h1>
+<p class="subtitle">你的 AI API Key 安全收藏夹</p>
+
+<div id="s1" class="setup-step active">
+<h2>创建主密码</h2>
+<div class="form-group">
+<label>主密码</label>
+<div class="input-group">
+<input type="password" id="spw" placeholder="输入主密码" maxlength="30">
+<button type="button" class="btn-icon eye-btn" onclick="togVis('spw')"><img class="eye-icon" src="assets/eye-closed.jpg" alt=""></button>
+</div>
+</div>
+<div class="form-group">
+<label>确认密码</label>
+<input type="password" id="spw2" placeholder="再次输入密码" maxlength="30">
+</div>
+<button class="btn btn-primary" onclick="setupNext1()">下一步</button>
+</div>
+
+<div id="s2" class="setup-step">
+<h2>设置快捷手势</h2>
+<p class="hint" style="margin-bottom:20px">手势密码可用于快速解锁，也可以稍后在设置中开启</p>
+<div class="gesture-setup-area">
+<p class="hint" style="margin-bottom:12px">请绘制手势（至少连接4个点）</p>
+<div id="sgw" class="gesture-wrap"><canvas id="sgc"></canvas></div>
+<p id="sgh" class="gesture-h"></p>
+</div>
+<div style="display:flex;gap:10px;margin-top:16px">
+<button class="btn btn-secondary" style="flex:1" onclick="setupSkipGesture()">跳过</button>
+</div>
+</div>
+
+<p class="hint" style="margin-top:20px">⚠ 清除浏览器数据将导致所有数据丢失</p>
+</div>
+</div>
+
+<!-- ============================================================
+     锁屏页面
+     ============================================================ -->
+<div id="lock-screen" class="screen">
+<div class="lock-box">
+<div class="lock-icon"><svg><use href="#icon-lock"/></svg></div>
+<div id="lock-gesture">
+<h2>绘制手势解锁</h2>
+<div id="lgw" class="gesture-wrap"><canvas id="lgc"></canvas></div>
+<div class="hint-wrap"><p id="lgh" class="hint"></p></div>
+<a href="#" onclick="switchToPw();return false">使用主密码登录</a>
+</div>
+<div id="lock-pw" class="hidden">
+<h2>输入主密码解锁</h2>
+<p style="color:var(--text2);font-size:13px;margin-bottom:20px">请输入主密码以访问你的 API Key</p>
+<div class="lock-pw-group">
+<div class="input-group">
+<input type="password" id="lpw" placeholder="输入主密码">
+<button type="button" class="btn-icon eye-btn" onclick="togVis('lpw')"><img class="eye-icon" src="assets/eye-closed.jpg" alt=""></button>
+</div>
+<button class="btn btn-primary" onclick="unlockByPw()">解锁</button>
+<p id="lpwh" class="hint" style="margin-top:10px"></p>
+</div>
+<a href="#" onclick="switchToGesture();return false" id="backToGesture" class="hidden">返回手势解锁</a>
+</div>
+</div>
+</div>
+
+<!-- ============================================================
+     主页面（侧边栏 + 多视图）
+     ============================================================ -->
+<div id="main-screen" class="screen">
+<div class="app-shell">
+
+  <!-- 侧边栏 -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-mark"><svg><use href="#icon-key"/></svg></span>
+      <span class="brand-text">KeyVault</span>
+    </div>
+
+    <div class="nav-section">导航</div>
+    <div class="nav-item active" data-view="dashboard" onclick="navView('dashboard')"><svg class="ni-icon"><use href="#icon-home"/></svg><span class="ni-label">总览</span></div>
+    <div class="nav-item" data-view="keys" onclick="navView('keys')"><svg class="ni-icon"><use href="#icon-key"/></svg><span class="ni-label">密钥</span></div>
+    <div class="nav-item" data-view="usage" onclick="navView('usage')"><svg class="ni-icon"><use href="#icon-chart"/></svg><span class="ni-label">用量</span></div>
+    <div class="nav-item" data-view="playground" onclick="navView('playground')"><svg class="ni-icon"><use href="#icon-gamepad"/></svg><span class="ni-label">测试台</span></div>
+    <div class="nav-item" data-view="security" onclick="navView('security')"><svg class="ni-icon"><use href="#icon-shield"/></svg><span class="ni-label">安全</span></div>
+    <div class="nav-item" data-view="activity" onclick="navView('activity')"><svg class="ni-icon"><use href="#icon-activity"/></svg><span class="ni-label">活动</span></div>
+
+    <div class="sidebar-foot">
+      <div class="vault-status"><span class="dot"></span><span class="vs-text">已加密</span></div>
+      <button class="btn-lock" onclick="openSettings()" title="设置"><svg><use href="#icon-settings"/></svg></button>
+      <button class="btn-lock" onclick="lockVault()" title="锁定"><svg><use href="#icon-lock"/></svg></button>
+    </div>
+  </aside>
+
+  <!-- 主区 -->
+  <div class="main-col">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="toggleSidebar()"><svg><use href="#icon-menu"/></svg></button>
+        <span class="topbar-title" id="viewTitle">总览</span>
+      </div>
+      <div class="topbar-center">
+        <div class="search-box">
+          <span class="s-icon"><svg class="i i-sm"><use href="#icon-search"/></svg></span>
+          <input type="text" id="search" placeholder="搜索 API Key、Provider..." oninput="onGlobalSearch()">
+          <kbd class="search-kbd">⌘ K</kbd>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn-sm" onclick="exportMenu()"><svg class="i i-sm" style="margin-right:4px;vertical-align:-3px"><use href="#icon-download"/></svg>导出</button>
+        <button class="btn-icon" id="noLockBtn" onclick="toggleNoLockBtn()" title="免密访问"><svg class="i"><use href="#icon-rocket"/></svg></button>
+        <button class="btn-icon" onclick="lockVault()" title="锁定"><svg class="i"><use href="#icon-lock"/></svg></button>
+      </div>
+    </header>
+
+    <div class="view-scroll">
+
+      <!-- Dashboard -->
+      <section id="view-dashboard" class="view active">
+        <header class="page-header">
+          <h1 class="page-title">总览</h1>
+          <p class="page-subtitle">本地优先的 AI API Key 安全管理与使用分析</p>
+        </header>
+        <div id="demoBannerDash"></div>
+        <div class="cards-row" id="dashCards"></div>
+        <div class="panel">
+          <div class="panel-head">
+            <div><div class="panel-title">用量趋势</div><div class="panel-sub">真实本地请求趋势</div></div>
+            <div class="range-tabs" id="dashRange">
+              <span class="range-tab" data-r="today">今日</span>
+              <span class="range-tab active" data-r="7d">7天</span>
+              <span class="range-tab" data-r="30d">30天</span>
+            </div>
+          </div>
+          <div class="chart-box" id="dashChart"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Provider 分析</div><div class="panel-sub">点击 Provider 查看详情</div></div>
+          <div id="provList"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">最近活动</div><div class="panel-sub">来自本地事件日志</div></div>
+          <div class="activity-list" id="actList"></div>
+        </div>
+      </section>
+
+      <!-- API Keys -->
+      <section id="view-keys" class="view">
+        <div class="view-head">
+          <div><h2>密钥</h2><p>安全存储与管理你的 AI API Key</p></div>
+        </div>
+        <div id="kg" class="key-grid"></div>
+        <div id="empty" class="empty">
+          <div class="e-icon"><svg><use href="#icon-folder"/></svg></div>
+          <h3>暂无数据</h3>
+          <p>开始使用你的第一个 API Key 吧</p>
+          <button class="btn-primary-line" onclick="openAdd()"><svg><use href="#icon-plus"/></svg> 添加 API Key</button>
+        </div>
+        <button class="fab" onclick="openAdd()"><svg><use href="#icon-plus"/></svg></button>
+      </section>
+
+      <!-- Usage -->
+      <section id="view-usage" class="view">
+        <div class="view-head"><div><h2>用量档案</h2><p>本地 API 使用统计，全部来自真实请求</p></div></div>
+        <div id="usageContent"></div>
+      </section>
+
+      <!-- Playground -->
+      <section id="view-playground" class="view">
+        <div class="view-head"><div><h2>测试台</h2><p>选择 Key 向 Provider 发起真实请求并自动记录用量</p></div></div>
+        <div class="pg-grid">
+          <div class="pg-form panel">
+            <div class="form-group">
+              <label>Provider</label>
+              <select id="pgProvider" class="form-control" onchange="onPgProviderChange()"></select>
+            </div>
+            <div class="form-group">
+              <label>API Key</label>
+              <select id="pgKey" class="form-control"></select>
+            </div>
+            <div class="form-group">
+              <label>API Endpoint</label>
+              <input type="text" id="pgEndpoint" class="form-control" placeholder="https://...">
+            </div>
+            <div class="form-group">
+              <label>Model</label>
+              <select id="pgModel" class="form-control"></select>
+            </div>
+            <div class="form-group">
+              <label>System Prompt</label>
+              <textarea id="pgSystem" class="form-control" rows="2" placeholder="You are a helpful assistant..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>User Prompt</label>
+              <textarea id="pgUser" class="form-control" rows="4" placeholder="Explain quantum computing..."></textarea>
+            </div>
+            <button class="pg-send" id="pgSend" onclick="runPlayground()"><svg><use href="#icon-gamepad"/></svg> 发送请求</button>
+          </div>
+          <div>
+            <div class="pg-response" id="pgResponse">// 响应将显示在这里</div>
+            <div class="pg-meta" id="pgMeta" style="display:none"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Security -->
+      <section id="view-security" class="view">
+        <div class="view-head"><div><h2>安全中心</h2><p>基于真实规则的安全评分与风险检测</p></div></div>
+        <div class="cards-row" id="secCards"></div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">安全检查清单</div></div>
+          <div class="check-list" id="secChecks"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">风险检测</div><div class="panel-sub">点击查看风险详情</div></div>
+          <div id="riskList"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">密钥轮换</div><div class="panel-sub">安全轮换流程（不会替你修改第三方平台）</div></div>
+          <div id="rotationGuide" style="font-size:13px;color:var(--text2);line-height:1.9"></div>
+        </div>
+      </section>
+
+      <!-- Key Detail -->
+      <section id="view-detail" class="view">
+        <div class="view-head">
+          <div><h2 id="kdTitle">密钥详情</h2><p id="kdSub">查看与管理单个 API Key</p></div>
+          <button class="btn-sm" onclick="navView('keys')"><svg class="i i-sm" style="margin-right:4px;vertical-align:-3px"><use href="#icon-arrow-right"/></svg>返回列表</button>
+        </div>
+        <div id="kdContent"></div>
+      </section>
+
+      <!-- Activity -->
+      <section id="view-activity" class="view">
+        <div class="view-head"><div><h2>活动</h2><p>来自真实本地事件日志，按分类筛选</p></div></div>
+        <div class="range-tabs" id="actTabs" style="margin-bottom:18px">
+          <span class="range-tab active" data-f="all" onclick="renderActivityView('all')">全部</span>
+          <span class="range-tab" data-f="security" onclick="renderActivityView('security')">安全</span>
+          <span class="range-tab" data-f="api" onclick="renderActivityView('api')">API</span>
+          <span class="range-tab" data-f="keys" onclick="renderActivityView('keys')">密钥</span>
+          <span class="range-tab" data-f="system" onclick="renderActivityView('system')">系统</span>
+        </div>
+        <div class="panel"><div id="actListFull" class="activity-list"></div></div>
+      </section>
+
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ============================================================
+     设置弹窗
+     ============================================================ -->
+<div id="settings-modal" class="modal-overlay">
+<div class="modal settings-modal">
+<h2>设置</h2>
+<div class="settings-section">
+<h3 class="settings-title">安全</h3>
+<button class="settings-item" onclick="openChangePw()"><span class="settings-item-left"><span class="settings-item-icon"><svg class="i"><use href="#icon-key"/></svg></span><span>修改主密码</span></span><span class="settings-item-arrow"><svg class="i i-sm"><use href="#icon-arrow-right"/></svg></span></button>
+</div>
+<div class="settings-section">
+<h3 class="settings-title">快捷解锁</h3>
+<div class="settings-item">
+<span class="settings-item-left"><span class="settings-item-icon"><svg class="i"><use href="#icon-sparkle"/></svg></span><span>手势密码</span></span>
+<label class="toggle"><input type="checkbox" id="gestureToggle" onchange="toggleGesture(this.checked)"><span class="toggle-slider"></span></label>
+</div>
+<button class="settings-item" id="resetGestureBtn" onclick="openResetGesture()" style="display:none"><span class="settings-item-left"><span class="settings-item-icon"><svg class="i"><use href="#icon-sparkle"/></svg></span><span>重置手势</span></span><span class="settings-item-arrow"><svg class="i i-sm"><use href="#icon-arrow-right"/></svg></span></button>
+</div>
+<div class="settings-section">
+<h3 class="settings-title">用量分析</h3>
+<div class="settings-field"><div><div class="sf-label">记录本地 API 用量</div><div class="sf-sub">用于总览与用量档案</div></div><label class="toggle"><input type="checkbox" id="analyticsToggle" onchange="toggleAnalytics(this.checked)"><span class="toggle-slider"></span></label></div>
+<div class="settings-field"><div><div class="sf-label">记录活动历史</div><div class="sf-sub">记录密钥增删改、复制、请求等事件</div></div><label class="toggle"><input type="checkbox" id="activityToggle" onchange="toggleActivity(this.checked)"><span class="toggle-slider"></span></label></div>
+<div class="settings-field"><div><div class="sf-label">数据留存</div><div class="sf-sub">超出后自动清理日志</div></div>
+<select id="retentionSel" onchange="setRetention(this.value)" class="form-control" style="width:auto;padding:6px 10px;font-size:12px">
+<option value="7">7 天</option><option value="30">30 天</option><option value="90">90 天</option><option value="365">1 年</option>
+</select></div>
+<div class="settings-field"><div><div class="sf-label">演示数据</div><div class="sf-sub">生成带标记的演示数据（不与真实数据混淆）</div></div>
+<button class="btn-sm" onclick="resetDemoData()">重置 Demo</button></div>
+</div>
+<div class="settings-section">
+<h3 class="settings-title">主题</h3>
+<div class="theme-options">
+<div class="theme-option" data-theme="dark" onclick="setTheme('dark')"><div class="theme-swatch" style="background:linear-gradient(135deg,#0F0F11,#252529)"></div><span class="theme-label">深色</span></div>
+<div class="theme-option" data-theme="light" onclick="setTheme('light')"><div class="theme-swatch" style="background:linear-gradient(135deg,#F7F4EF,#E5E0D8)"></div><span class="theme-label">浅色</span></div>
+<div class="theme-option" data-theme="softpurple" onclick="setTheme('softpurple')"><div class="theme-swatch" style="background:linear-gradient(135deg,#7C6BA8,#E2DBEE)"></div><span class="theme-label">柔雾紫</span></div>
+</div>
+</div>
+<div class="settings-section">
+<h3 class="settings-title">危险操作</h3>
+<button class="settings-item danger" onclick="resetAll()"><span class="settings-item-left"><span class="settings-item-icon"><svg class="i"><use href="#icon-trash"/></svg></span><span>重置所有数据</span></span><span class="settings-item-arrow"><svg class="i i-sm"><use href="#icon-arrow-right"/></svg></span></button>
+</div>
+<div class="form-actions"><button class="btn btn-secondary" onclick="closeSettings()">关闭</button></div>
+</div>
+</div>
+
+<!-- 修改主密码 -->
+<div id="change-pw-modal" class="modal-overlay">
+<div class="modal">
+<h2>修改主密码</h2>
+<div class="form-group"><label>当前密码</label><div class="input-group"><input type="password" id="cpwOld" placeholder="输入当前主密码"><button type="button" class="btn-icon eye-btn" onclick="togVis('cpwOld')"><img class="eye-icon" src="assets/eye-closed.jpg" alt=""></button></div></div>
+<div class="form-group"><label>新密码</label><div class="input-group"><input type="password" id="cpwNew" placeholder="输入新密码" maxlength="30"><button type="button" class="btn-icon eye-btn" onclick="togVis('cpwNew')"><img class="eye-icon" src="assets/eye-closed.jpg" alt=""></button></div></div>
+<div class="form-group"><label>确认新密码</label><input type="password" id="cpwNew2" placeholder="再次输入新密码" maxlength="30"></div>
+<div class="form-actions"><button class="btn btn-secondary" onclick="closeChangePw()">取消</button><button class="btn btn-primary" onclick="saveChangePw()">保存</button></div>
+</div>
+</div>
+
+<!-- 重置手势 -->
+<div id="reset-gesture-modal" class="modal-overlay">
+<div class="modal">
+<h2>重置手势</h2>
+<div id="rgs1"><p style="font-size:13px;color:var(--text2);margin-bottom:14px">请输入主密码验证身份</p><div class="form-group"><input type="password" id="rgpw" placeholder="主密码"></div><button class="btn btn-primary" onclick="verifyResetGesture()">验证</button></div>
+<div id="rgs2" class="hidden"><p class="hint" style="margin-bottom:14px">请绘制新手势密码</p><div id="rggw" class="gesture-wrap"><canvas id="rggc"></canvas></div><p id="rggh" class="gesture-h"></p></div>
+<div id="rgs3" class="hidden"><p class="hint" style="margin-bottom:14px">请再次绘制确认</p><div id="rggw2" class="gesture-wrap"><canvas id="rggc2"></canvas></div><p id="rggh2" class="gesture-h"></p></div>
+<div class="form-actions" style="margin-top:16px"><button class="btn btn-secondary" onclick="closeResetGesture()">取消</button></div>
+</div>
+</div>
+
+<!-- 添加/编辑 API Key -->
+<div id="kmodal" class="modal-overlay">
+<div class="modal">
+<h2 id="mtitle">添加 API Key</h2>
+<form id="kform" onsubmit="saveKey(event)">
+<div class="form-group"><label>快速选择</label>
+<div class="provider-tags" id="providerTags"></div></div>
+<div class="pg-row">
+<div class="form-group"><label>Provider</label><select id="mp" class="form-control" onchange="onProviderPick()"></select></div>
+<div class="form-group"><label>环境</label>
+<select id="menv" class="form-control"><option>Production</option><option>Development</option><option>Staging</option></select></div>
+</div>
+<div class="form-group"><label>名称 *</label><input type="text" id="mn" class="form-control" required placeholder="例如：OpenAI Production"></div>
+<div class="form-group"><label>API Key *</label><div class="input-group"><input type="password" id="mk" class="form-control" required placeholder="sk-..."><button type="button" class="btn-icon eye-btn" onclick="togVis('mk')"><img class="eye-icon" src="assets/eye-closed.jpg" alt=""></button></div><div id="detectHint" class="hint" style="text-align:left;margin-top:6px"></div></div>
+<div class="pg-row">
+<div class="form-group"><label>状态</label><select id="mst" class="form-control"><option>Active</option><option>Deprecated</option><option>Expired</option><option>Revoked</option></select></div>
+<div class="form-group"><label>标签</label><input type="text" id="mtg" class="form-control" placeholder="prod, core, ..."></div>
+</div>
+<div class="form-group"><label>URL / 备注地址</label><input type="text" id="mu" class="form-control" placeholder="任意文字描述"></div>
+<div class="form-group"><label>备注</label><textarea id="mno" class="form-control" rows="3" placeholder="备注信息..."></textarea></div>
+<input type="hidden" id="meid">
+<div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button><button type="submit" class="btn btn-primary">保存</button></div>
+</form>
+</div>
+</div>
+
+<!-- 风险详情 -->
+<div id="risk-modal" class="modal-overlay">
+<div class="modal">
+<h2 id="riskTitle">风险详情</h2>
+<div id="riskBody" style="font-size:14px;line-height:1.7;color:var(--text2)"></div>
+<div class="form-actions"><button class="btn btn-secondary" onclick="closeModalEl('risk-modal')">关闭</button></div>
+</div>
+</div>
+
+<!-- Provider 详情 -->
+<div id="prov-modal" class="modal-overlay">
+<div class="modal">
+<h2 id="provTitle">Provider</h2>
+<div id="provBody" style="font-size:14px;line-height:1.7;color:var(--text2)"></div>
+<div class="form-actions"><button class="btn btn-secondary" onclick="closeModalEl('prov-modal')">关闭</button></div>
+</div>
+</div>
+
+<!-- 请求详情 -->
+<div id="request-modal" class="modal-overlay">
+<div class="modal">
+<h2 id="reqTitle">请求详情</h2>
+<div id="reqBody" style="font-size:14px;line-height:1.7;color:var(--text2)"></div>
+<div class="form-actions"><button class="btn btn-secondary" onclick="closeModalEl('request-modal')">关闭</button></div>
+</div>
+</div>
+
+<!-- Toast / Confirm -->
+<div id="toasts" class="toast-wrap"></div>
+<div id="confirmDialog" class="confirm-overlay" style="display:none">
+<div class="confirm-box"><p id="confirmMsg"></p><div class="confirm-btns"><button class="btn btn-secondary" id="confirmNo">取消</button><button class="btn btn-primary" id="confirmYes">确定</button></div></div>
+</div>
+
+<script src="echarts.min.js"></script>
+<script src="js/crypto.js"></script>
+<script src="js/analytics.js"></script>
+<script src="js/playground.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

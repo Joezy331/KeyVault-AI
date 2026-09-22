@@ -1,0 +1,117 @@
+@startuml Vault-Unlock-Sequence
+!theme plain
+skinparam backgroundColor #0b0b14
+skinparam defaultFontColor #e2e8f0
+skinparam defaultFontSize 12
+skinparam sequenceLifeLineBorderColor #6366f1
+skinparam sequenceLifeLineBackgroundColor #1a1a2e
+skinparam sequenceParticipantBorderColor #6366f1
+skinparam sequenceParticipantBackgroundColor #1a1a2e
+skinparam sequenceParticipantFontColor #e2e8f0
+skinparam sequenceArrowColor #818cf8
+skinparam sequenceGroupBorderColor #6366f1
+skinparam sequenceGroupBackgroundColor #222240
+skinparam noteBorderColor #6366f1
+skinparam noteBackgroundColor #1a1a2e
+skinparam noteFontColor #e2e8f0
+
+title Vault - 解锁流程 (手势 / 密码 / 免密)
+
+actor 用户
+
+participant "LockScreen" as UI
+participant "app.js" as App
+participant "CryptoModule (C)" as Crypto
+participant "StorageModule (S)" as Storage
+participant "Web Crypto API" as WC
+
+== 手势解锁 ==
+
+用户 -> UI : 在九宫格绘制手势
+UI -> App : GL 回调(pattern)
+
+App -> Storage : loadCfg()
+Storage --> App : cfg
+
+App -> Crypto : hash(pattern)
+Crypto -> WC : SHA-256
+WC --> App : gestureHash
+
+alt gestureHash == cfg.gestureHash
+    App -> Crypto : derive(pattern, cfg.gestureSalt)
+    Crypto -> WC : PBKDF2 → AES-256-GCM
+    WC --> App : gestureKey
+
+    App -> WC : decrypt(AES-GCM, gestureKey, cfg.wrappedKey)
+    WC --> App : rawKey (256bit)
+
+    App -> WC : importKey('raw', rawKey, 'AES-GCM')
+    WC --> App : mk (CryptoKey)
+
+    App -> Storage : loadData()
+    Storage --> App : storedKeys[]
+
+    loop 每个 storedKey
+        App -> Crypto : dec(ek.c, ek.i, mk)
+        Crypto -> WC : AES-256-GCM 解密
+        WC --> App : apiKey (明文)
+    end
+
+    App -> UI : _markSuccess()
+    App -> UI : showScreen('main-screen')
+    App -> UI : renderKeys()
+else 手势错误
+    App -> UI : _markError()
+    App -> UI : 提示"手势错误"
+end
+
+== 密码解锁 ==
+
+用户 -> UI : 输入主密码
+UI -> App : unlockByPw()
+
+App -> Storage : loadCfg()
+Storage --> App : cfg
+
+App -> Crypto : hash(password)
+Crypto -> WC : SHA-256
+WC --> App : hash
+
+alt hash == cfg.pwHash
+    App -> Crypto : derive(password, cfg.keySalt)
+    Crypto -> WC : PBKDF2 → AES-256-GCM
+    WC --> App : key (CryptoKey)
+
+    App -> Crypto : dec(cfg.test.c, cfg.test.i, key)
+    Crypto -> WC : AES-256-GCM 解密
+    WC --> App : "VAULT_OK"
+
+    alt ok == "VAULT_OK"
+        App -> App : mk = key
+        App -> Storage : loadData()
+        App -> App : loadKeys() 解密所有 API Key
+        App -> UI : showScreen('main-screen')
+    end
+else 密码错误
+    App -> UI : 提示"密码错误"
+end
+
+== 免密自动解锁 ==
+
+App -> Storage : loadCfg()
+Storage --> App : cfg (noLock == true)
+
+App -> Crypto : derive('VaultNoLock', NOLOCK_SALT)
+Crypto -> WC : PBKDF2
+WC --> App : noLockKey
+
+App -> WC : decrypt(AES-GCM, noLockKey, cfg.noLockWrapped)
+WC --> App : rawKey
+
+App -> WC : importKey('raw', rawKey, 'AES-GCM')
+WC --> App : mk
+
+App -> App : loadKeys()
+App -> UI : showScreen('main-screen')
+
+@enduml

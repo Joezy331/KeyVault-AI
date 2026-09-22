@@ -1,0 +1,84 @@
+@startuml Vault-Sequence
+!theme plain
+skinparam backgroundColor #0b0b14
+skinparam defaultFontColor #e2e8f0
+skinparam defaultFontSize 12
+skinparam sequenceLifeLineBorderColor #6366f1
+skinparam sequenceLifeLineBackgroundColor #1a1a2e
+skinparam sequenceParticipantBorderColor #6366f1
+skinparam sequenceParticipantBackgroundColor #1a1a2e
+skinparam sequenceParticipantFontColor #e2e8f0
+skinparam sequenceArrowColor #818cf8
+skinparam sequenceGroupBorderColor #6366f1
+skinparam sequenceGroupBackgroundColor #222240
+skinparam sequenceDividerBorderColor #6366f1
+skinparam noteBorderColor #6366f1
+skinparam noteBackgroundColor #1a1a2e
+skinparam noteFontColor #e2e8f0
+
+title Vault - 首次设置流程
+
+actor 用户
+participant "SetupScreen\n(index.html)" as UI
+participant "app.js\n业务逻辑" as App
+participant "CryptoModule\n(C)" as Crypto
+participant "StorageModule\n(S)" as Storage
+participant "Web Crypto API" as WC
+
+用户 -> UI : 输入主密码 + 确认密码
+UI -> App : setupNext1()
+App -> App : 验证密码 (4-30位, 一致性)
+App -> UI : 显示步骤2 (手势设置)
+
+alt 设置手势
+    用户 -> UI : 在九宫格绘制手势 (≥4点)
+    UI -> App : GL 回调(pattern)
+    App -> App : _markSuccess()
+else 跳过手势
+    用户 -> UI : 点击"跳过"
+    UI -> App : setupSkipGesture()
+end
+
+== finishSetup(pattern) ==
+
+App -> Crypto : genSalt()
+Crypto --> App : keySalt (16字节随机)
+
+App -> Crypto : derive(password, keySalt)
+Crypto -> WC : PBKDF2 (100,000 iterations, SHA-256)
+WC --> Crypto : AES-256-GCM 密钥
+Crypto --> App : key (CryptoKey)
+
+App -> Crypto : enc("VAULT_OK", key)
+Crypto -> WC : AES-256-GCM 加密
+WC --> Crypto : {ciphertext, iv}
+Crypto --> App : test
+
+App -> Crypto : hash(password)
+Crypto -> WC : SHA-256
+WC --> App : pwHash
+
+alt 有手势密码
+    App -> Crypto : genSalt()
+    Crypto --> App : gestureSalt
+    App -> Crypto : hash(pattern)
+    Crypto --> App : gestureHash
+    App -> Crypto : derive(pattern, gestureSalt)
+    Crypto --> App : gKey
+    App -> WC : exportKey('raw', key)
+    WC --> App : rawKey (256bit)
+    App -> WC : encrypt(AES-GCM, gKey, rawKey)
+    WC --> App : wrappedKey {c, i}
+end
+
+App -> Storage : saveCfg({pwHash, keySalt, test, gestureEnabled, ...})
+Storage -> Storage : localStorage.setItem('vault_config')
+
+App -> Storage : saveData([])
+Storage -> Storage : localStorage.setItem('vault_data', '[]')
+
+App -> App : mk = key
+App -> UI : showScreen('main-screen')
+App -> UI : renderKeys() (空列表)
+
+@enduml

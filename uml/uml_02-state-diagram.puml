@@ -1,0 +1,120 @@
+@startuml Vault-StateMachine
+!theme plain
+skinparam backgroundColor #0b0b14
+skinparam defaultFontColor #e2e8f0
+skinparam defaultFontSize 12
+skinparam stateBorderColor #6366f1
+skinparam stateBackgroundColor #1a1a2e
+skinparam stateFontColor #e2e8f0
+skinparam arrowColor #818cf8
+skinparam noteBorderColor #6366f1
+skinparam noteBackgroundColor #1a1a2e
+skinparam noteFontColor #e2e8f0
+
+title Vault - 应用状态机
+
+[*] --> CheckConfig : DOMContentLoaded
+
+state CheckConfig <<choice>>
+CheckConfig : 检查 localStorage\n是否有 vault_config
+
+state "首次使用\n(SetupScreen)" as Setup {
+    Setup : 创建主密码 (4-30位)
+    Setup : 可选: 设置手势密码
+
+    state SetupFlow {
+        [*] --> Step1_Password
+        Step1_Password : 输入 + 确认主密码
+        Step1_Password --> Step2_Gesture : 密码验证通过
+        Step1_Password --> Step1_Password : 密码不匹配/太短
+        Step2_Gesture : 绘制手势 (≥4点)
+        Step2_Gesture --> [*] : 跳过 或 完成手势
+        Step2_Gesture --> Step2_Gesture : 点数不足
+    }
+}
+
+state "免密模式" as AutoUnlock {
+    AutoUnlock : derive('VaultNoLock', SALT)
+    AutoUnlock : 解密 wrappedKey → mk
+}
+
+state "锁屏\n(LockScreen)" as Locked {
+    Locked : 根据 gestureEnabled\n选择解锁模式
+
+    state "手势解锁" as GestureUnlock {
+        GestureUnlock : 绘制 3x3 九宫格
+        GestureUnlock : hash 比对
+        GestureUnlock : derive → unwrapKey → mk
+    }
+
+    state "密码解锁" as PasswordUnlock {
+        PasswordUnlock : 输入主密码
+        PasswordUnlock : hash 比对 + derive → mk
+        PasswordUnlock : AES-GCM 解密 test 验证
+    }
+
+    state UnlockMode <<choice>>
+    [*] --> UnlockMode
+    UnlockMode --> GestureUnlock : gestureEnabled == true
+    UnlockMode --> PasswordUnlock : gestureEnabled == false
+
+    GestureUnlock --> PasswordUnlock : 点击"使用主密码登录"
+    PasswordUnlock --> GestureUnlock : 点击"返回手势解锁"
+}
+
+state "已解锁\n(MainScreen)" as Unlocked {
+    Unlocked : mk 在内存中
+    Unlocked : 显示 API Key 卡片列表
+
+    state "API Key 操作" as KeyOps {
+        [*] --> ViewKeys
+        ViewKeys : 渲染卡片 (名称/URL/Key/备注)
+        ViewKeys --> Search : 搜索过滤
+        ViewKeys --> ToggleVis : 显示/隐藏 Key
+        ViewKeys --> CopyKey : 复制到剪贴板
+        ViewKeys --> EditKey : 编辑
+        ViewKeys --> DeleteKey : 删除
+        ViewKeys --> AddKey : 点击 + 按钮
+        AddKey --> ViewKeys : 保存
+        EditKey --> ViewKeys : 保存
+        DeleteKey --> ViewKeys : 确认删除
+        Search --> ViewKeys : 清空搜索
+    }
+
+    state "设置操作" as SettingsOps {
+        [*] --> SettingsMain
+        SettingsMain : 主题/安全/手势
+        SettingsMain --> ChangePassword : 修改主密码
+        SettingsMain --> ToggleGesture : 手势开关
+        SettingsMain --> ResetGesture : 重置手势
+        SettingsMain --> SetTheme : 切换主题
+        SettingsMain --> ResetAll : 重置所有数据
+        SettingsMain --> ToggleNoLock : 免密开关
+    }
+
+    state "导出操作" as ExportOps {
+        ExportOps : exportAllExcel()
+        ExportOps : SheetJS 生成 .xlsx
+    }
+}
+
+CheckConfig --> Setup : 无配置
+CheckConfig --> AutoUnlock : noLock == true
+CheckConfig --> Locked : noLock == false
+
+Setup --> Unlocked : 设置完成
+AutoUnlock --> Unlocked : 解密成功
+AutoUnlock --> Locked : 解密失败
+Locked --> Unlocked : 验证通过
+Unlocked --> Locked : lockVault()
+Unlocked --> [*] : resetAll() 重置
+
+note right of Unlocked
+    密钥安全:
+    - mk 仅在内存中，锁定后清空
+    - localStorage 仅存加密数据
+    - 手势包裹密钥 (wrappedKey)
+    - 免密包裹密钥 (noLockWrapped)
+end note
+
+@enduml

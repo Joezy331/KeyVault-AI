@@ -1,0 +1,199 @@
+@startuml Vault-Architecture
+!theme plain
+skinparam backgroundColor #0b0b14
+skinparam defaultFontColor #e2e8f0
+skinparam defaultFontSize 12
+skinparam packageBorderColor #2a2a42
+skinparam packageBackgroundColor #12121f
+skinparam classBorderColor #6366f1
+skinparam classBackgroundColor #1a1a2e
+skinparam classFontColor #e2e8f0
+skinparam arrowColor #818cf8
+skinparam noteBorderColor #6366f1
+skinparam noteBackgroundColor #1a1a2e
+skinparam noteFontColor #e2e8f0
+skinparam stereotypeFontColor #818cf8
+
+title Vault - API Key 安全管理器\n系统架构图
+
+package "Electron Main Process" #222240 {
+    class MainProcess {
+        + createWindow(): void
+        - app.whenReady()
+        - app.on('window-all-closed')
+        - app.on('activate')
+    }
+
+    class BrowserWindow {
+        + width: 1200
+        + height: 800
+        + nodeIntegration: true
+        + contextIsolation: false
+        + loadFile('index.html')
+    }
+
+    MainProcess --> BrowserWindow : 创建
+}
+
+package "Renderer Process (index.html + app.js)" #222240 {
+
+    package "加密模块 (C)" #1a1a2e {
+        class CryptoModule <<module>> {
+            + {static} genSalt(): Uint8Array
+            + {static} genIV(): Uint8Array
+            + {static} derive(input, salt): Promise<CryptoKey>
+            + {static} enc(pt, key): Promise<{c, i}>
+            + {static} dec(ci, ii, key): Promise<string>
+            + {static} hash(d): Promise<string>
+        }
+        note right of CryptoModule
+            算法：PBKDF2 + AES-256-GCM + SHA-256
+            密钥派生：100,000 次迭代
+        end note
+    }
+
+    package "存储模块 (S)" #1a1a2e {
+        class StorageModule <<module>> {
+            + {static} saveCfg(c): void
+            + {static} loadCfg(): object|null
+            + {static} saveData(d): void
+            + {static} loadData(): array
+        }
+        note right of StorageModule
+            vault_config → 配置
+            vault_data → 加密的 API Key
+            vault_theme → 主题设置
+        end note
+    }
+
+    package "手势锁 (GL)" #1a1a2e {
+        class GestureLock {
+            - w: HTMLElement
+            - cv: HTMLCanvasElement
+            - ctx: CanvasRenderingContext2D
+            - cb: Function
+            - dots: HTMLElement[]
+            - sel: number[]
+            - drawing: boolean
+            - grid: HTMLElement
+            + constructor(wid, cid, cb)
+            - _init(): void
+            - _resize(): void
+            - _center(i): {x, y}
+            - _hit(x, y): number
+            - _sel(i): void
+            - _draw(): void
+            - _drawTo(x, y): void
+            - _pd(e): void
+            - _pm(e): void
+            - _pu(e): void
+            - _markError(): void
+            - _markSuccess(): void
+            + reset(): void
+            + destroy(): void
+        }
+        note bottom of GestureLock
+            3×3 九宫格手势识别
+            至少连接 4 个点
+            Pointer Events API
+        end note
+    }
+
+    package "全局状态" #1a1a2e {
+        class GlobalState <<state>> {
+            + mk: CryptoKey|null  // AES-256-GCM 主密钥
+            + keys: APIKey[]       // 解密后的 API Key 列表
+            + visSet: Set          // 显示/隐藏状态
+            + lGL: GestureLock     // 锁屏手势锁
+            + setupGL: GestureLock // 设置流程手势锁
+            + resetGL1: GestureLock // 重置手势-首次
+            + resetGL2: GestureLock // 重置手势-确认
+            + setupPw: string      // 设置临时密码
+            + resetVerifiedMk: CryptoKey
+        }
+    }
+
+    class APIKey {
+        + id: string (UUID)
+        + name: string
+        + apiKey: string
+        + url: string
+        + notes: string
+        + createdAt: number
+        + updatedAt: number
+    }
+
+    class StoredKey {
+        + id: string
+        + name: string
+        + ek: {c: string, i: string}
+        + url: string
+        + notes: string
+        + createdAt: number
+        + updatedAt: number
+    }
+
+    class VaultConfig {
+        + pwHash: string
+        + pwSalt: string
+        + keySalt: string
+        + test: {c, i}
+        + gestureEnabled: boolean
+        + gestureHash: string
+        + gestureSalt: string
+        + wrappedKey: {c, i}
+        + noLock: boolean
+        + noLockWrapped: {c, i}
+    }
+}
+
+package "UI 页面" #222240 {
+    class SetupScreen {
+        + 步骤1: 创建主密码
+        + 步骤2: 可选手势密码
+    }
+
+    class LockScreen {
+        + 手势解锁模式
+        + 主密码解锁模式
+    }
+
+    class MainScreen {
+        + 顶部导航栏
+        + 搜索框
+        + API Key 卡片网格
+        + FAB 添加按钮
+    }
+
+    class SettingsModal {
+        + 安全: 修改主密码
+        + 快捷解锁: 手势开关/重置
+        + 主题: 暗夜/纯白/柔雾紫
+        + 危险操作: 重置所有数据
+    }
+
+    class AddEditModal {
+        + 快速选择供应商
+        + 名称 / API Key
+        + URL / 备注
+    }
+}
+
+BrowserWindow ..> SetupScreen : 初始/首次
+BrowserWindow ..> LockScreen : 锁屏
+BrowserWindow ..> MainScreen : 解锁后
+
+GestureLock ..> CryptoModule : 使用
+GlobalState ..> CryptoModule : 使用
+GlobalState ..> StorageModule : 使用
+GlobalState ..> GestureLock : 持有实例
+GlobalState ..> APIKey : 管理
+StorageModule ..> VaultConfig : 存储
+StorageModule ..> StoredKey : 存储
+APIKey <..> StoredKey : 加密/解密转换
+
+SetupScreen ..> CryptoModule : 派生密钥
+LockScreen ..> CryptoModule : 验证/解密
+MainScreen ..> GlobalState : 读写 keys
+
+@enduml

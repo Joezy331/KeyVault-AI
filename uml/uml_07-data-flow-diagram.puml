@@ -1,0 +1,95 @@
+@startuml Vault-DataFlow
+!theme plain
+skinparam backgroundColor #0b0b14
+skinparam defaultFontColor #e2e8f0
+skinparam defaultFontSize 11
+skinparam packageBorderColor #2a2a42
+skinparam packageBackgroundColor #12121f
+skinparam rectangleBorderColor #6366f1
+skinparam rectangleBackgroundColor #1a1a2e
+skinparam rectangleFontColor #e2e8f0
+skinparam agentBorderColor #6366f1
+skinparam agentBackgroundColor #1a1a2e
+skinparam agentFontColor #e2e8f0
+skinparam arrowColor #818cf8
+skinparam noteBorderColor #6366f1
+skinparam noteBackgroundColor #222240
+skinparam noteFontColor #e2e8f0
+skinparam flowstateBackgroundColor #1a1a2e
+skinparam flowstateBorderColor #6366f1
+
+title Vault - 密钥层次与数据加密流
+
+actor "用户" as User
+
+rectangle "输入层" as Input {
+    rectangle "主密码\n(4-30位字符)" as PW
+    rectangle "手势密码\n(3x3九宫格\n≥4连接点)" as GP
+    rectangle "免密口令\n('VaultNoLock')" as NL
+}
+
+rectangle "密钥派生层\nPBKDF2 (100K iterations, SHA-256)" as KDF {
+    rectangle "主密钥 mk\n(AES-256-GCM CryptoKey)" as MK
+    rectangle "手势密钥 gKey\n(AES-256-GCM CryptoKey)" as GK
+    rectangle "免密密钥 nlKey\n(AES-256-GCM CryptoKey)" as NK
+}
+
+rectangle "密钥包裹层\nAES-256-GCM 加密" as WRAP {
+    rectangle "wrappedKey\n手势包裹的 mk\n{c: base64, iv: base64}" as WK
+    rectangle "noLockWrapped\n免密包裹的 mk\n{c: base64, iv: base64}" as NW
+}
+
+rectangle "数据加密层\nAES-256-GCM 加密" as ENC {
+    rectangle "test\n加密验证值 'VAULT_OK'\n{c, iv}" as TEST
+    rectangle "ek (每个API Key)\n加密的 API Key 密文\n{c: base64, iv: base64}" as EK
+}
+
+rectangle "存储层\nlocalStorage" as STORE {
+    rectangle "vault_config\n{pwHash, keySalt, test,\ngestureHash, gestureSalt,\nwrappedKey, noLockWrapped}" as VCFG
+    rectangle "vault_data\n[{id, name, ek, url,\nnotes, createdAt}]" as VDATA
+}
+
+rectangle "内存层\n(运行时)" as MEM {
+    rectangle "mk (CryptoKey)\n锁定后清空 = null" as MEM_MK
+    rectangle "keys[]\n解密后的 API Key 明文" as MEM_KEYS
+}
+
+' === 初始化设置流程 ===
+User --> PW : 输入主密码
+PW --> MK : salt随机 + PBKDF2
+MK --> TEST : AES-GCM加密 'VAULT_OK'
+TEST --> VCFG : 保存到配置
+
+User --> GP : 可选: 绘制手势
+GP --> GK : salt随机 + PBKDF2
+MK -.-> WK : exportKey(raw)
+GK --> WK : AES-GCM加密 raw(mk)
+WK --> VCFG : 保存到配置
+
+' === 免密模式 ===
+NL --> NK : NOLOCK_SALT + PBKDF2
+MK -.-> NW : exportKey(raw)
+NK --> NW : AES-GCM加密 raw(mk)
+NW --> VCFG : 保存到配置
+
+' === API Key 存储 ===
+MK --> EK : AES-GCM加密 每个apiKey
+EK --> VDATA : 保存到数据
+
+' === 解锁恢复 ===
+VCFG --> MK : 主密码/gesture/免密 → 解密恢复 mk
+VDATA --> EK : 加载加密数据
+MK --> MEM_MK : 导入为 CryptoKey
+EK --> MEM_KEYS : mk 解密 → 明文 keys[]
+
+note right of KDF
+  安全设计要点:
+  1. mk 仅存在于内存，锁定后清空
+  2. localStorage 只存加密数据
+  3. 密码验证用 hash 比对，不用明文
+  4. test 值验证密钥正确性
+  5. 每次加密使用随机 IV
+  6. 修改主密码会重新加密所有 Key
+end note
+
+@enduml

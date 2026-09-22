@@ -1,0 +1,87 @@
+@startuml Vault-KeyManagement
+!theme plain
+skinparam backgroundColor #0b0b14
+skinparam defaultFontColor #e2e8f0
+skinparam defaultFontSize 12
+skinparam sequenceLifeLineBorderColor #6366f1
+skinparam sequenceLifeLineBackgroundColor #1a1a2e
+skinparam sequenceParticipantBorderColor #6366f1
+skinparam sequenceParticipantBackgroundColor #1a1a2e
+skinparam sequenceParticipantFontColor #e2e8f0
+skinparam sequenceArrowColor #818cf8
+skinparam noteBorderColor #6366f1
+skinparam noteBackgroundColor #1a1a2e
+skinparam noteFontColor #e2e8f0
+
+title Vault - API Key CRUD 与数据流
+
+actor 用户
+participant "MainScreen\n卡片 UI" as UI
+participant "app.js" as App
+participant "CryptoModule (C)" as Crypto
+participant "StorageModule (S)" as Storage
+
+== 添加 API Key ==
+
+用户 -> UI : 点击 + 按钮
+UI -> App : openAdd()
+App -> UI : 显示弹窗 (供应商快速选择)
+
+用户 -> UI : 填写名称/Key/URL/备注
+用户 -> UI : 点击保存
+UI -> App : saveKey(event)
+
+App -> App : 验证 (名称和Key不为空)
+
+App -> App : keys.push({id: uuid(), name, apiKey, url, notes, createdAt, updatedAt})
+
+loop 每个 key in keys
+    App -> Crypto : enc(key.apiKey, mk)
+    Crypto --> App : {ciphertext, iv} (AES-256-GCM)
+end
+
+App -> Storage : saveData(storedKeys[])
+Storage -> Storage : localStorage.setItem('vault_data', JSON)
+
+App -> UI : renderKeys() 刷新卡片
+App -> UI : toast('已添加')
+
+== 编辑 API Key ==
+
+用户 -> UI : 点击编辑按钮
+UI -> App : openEdit(id)
+App -> App : 查找 keys 数组
+App -> UI : 填充弹窗表单
+
+用户 -> UI : 修改内容
+UI -> App : saveKey(event)
+App -> App : 更新 keys 数组
+App -> App : saveAll() 重新加密存储
+App -> UI : renderKeys() + toast('已更新')
+
+== 删除 API Key ==
+
+用户 -> UI : 点击删除按钮
+UI -> App : delKey(id)
+App -> UI : confirm('确定删除？')
+用户 -> UI : 确认
+App -> App : keys.filter(k => k.id !== id)
+App -> App : saveAll() 重新加密存储
+App -> UI : renderKeys() + toast('已删除')
+
+== 搜索过滤 ==
+
+用户 -> UI : 输入搜索关键词
+UI -> App : renderKeys()
+App -> App : keys.filter(k => name/url/notes 包含关键词)
+App -> UI : 渲染过滤后的卡片
+
+== 导出 Excel ==
+
+用户 -> UI : 点击"导出 Excel"
+UI -> App : exportAllExcel()
+App -> App : 构造 data[] 明文数据
+App -> App : XLSX.utils.json_to_sheet(data)
+App -> App : XLSX.writeFile(wb, 'vault_export_时间戳.xlsx')
+
+@enduml

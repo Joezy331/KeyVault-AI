@@ -1,0 +1,58 @@
+{
+  "name": "keyvault-ai",
+  "version": "2.0.0",
+  "description": "KeyVault AI - 本地优先的 AI API Key 安全管理与使用分析平台",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:portable": "electron-builder --win portable",
+    "build:win": "electron-builder --win portable"
+  },
+  "author": "KeyVault AI",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "sharp": "^0.34.5"
+  },
+  "build": {
+    "appId": "com.keyvault.ai",
+    "productName": "KeyVault AI",
+    "icon": "icon-vault-md-256.png",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "index.html",
+      "style.css",
+      "app2.css",
+      "echarts.min.js",
+      "js/**/*",
+      "assets/**/*",
+      "icon-vault-md-256.png",
+      "package.json",
+      "node_modules/xlsx/**/*",
+      "!node_modules/sharp/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": false,
+      "verifyUpdateCodeSignature": false
+    },
+    "portable": {
+      "artifactName": "KeyVaultAI.exe"
+    }
+  },
+  "dependencies": {
+    "jsdom": "^30.0.1",
+    "xlsx": "^0.18.5"
+  }
+}

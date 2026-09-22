@@ -1,0 +1,115 @@
+@startuml Vault-Component
+!theme plain
+skinparam backgroundColor #0b0b14
+skinparam defaultFontColor #e2e8f0
+skinparam defaultFontSize 12
+skinparam packageBorderColor #2a2a42
+skinparam packageBackgroundColor #12121f
+skinparam componentBorderColor #6366f1
+skinparam componentBackgroundColor #1a1a2e
+skinparam componentFontColor #e2e8f0
+skinparam arrowColor #818cf8
+skinparam noteBorderColor #6366f1
+skinparam noteBackgroundColor #1a1a2e
+skinparam noteFontColor #e2e8f0
+skinparam databaseBorderColor #6366f1
+skinparam databaseBackgroundColor #1a1a2e
+skinparam databaseFontColor #e2e8f0
+
+title Vault - 系统组件图
+
+package "Electron 应用" {
+
+    [main.js\n(主进程)] as MAIN
+
+    package "渲染进程" {
+
+        package "视图层 (index.html + style.css)" {
+            [设置页面\n(SetupScreen)] as SETUP
+            [锁屏页面\n(LockScreen)] as LOCK
+            [主页面\n(MainScreen)] as MAINSCR
+            [弹窗组件\n(设置/添加/编辑/修改密码/重置手势)] as MODALS
+        }
+
+        package "业务逻辑 (app.js)" {
+            [初始化\n(Init)] as INIT
+            [设置流程\n(SetupFlow)] as SETUPFLOW
+            [锁屏流程\n(LockFlow)] as LOCKFLOW
+            [API Key 管理\n(KeyManager)] as KEYMGR
+            [设置管理\n(SettingsMgr)] as SETTMGR
+            [导出功能\n(Export)] as EXPORT
+        }
+
+        package "核心模块" {
+            [加密模块 (C)\nPBKDF2 + AES-256-GCM + SHA-256] as CRYPTO
+            [存储模块 (S)\nlocalStorage 封装] as STORAGE
+            [手势锁类 (GL)\n3x3 九宫格手势识别] as GESTURE
+        }
+    }
+}
+
+database "localStorage" as LS {
+    storage "vault_config" as CFG {
+        pwHash, pwSalt, keySalt
+        test, gestureEnabled
+        gestureHash, gestureSalt
+        wrappedKey
+        noLock, noLockWrapped
+    }
+    storage "vault_data" as DATA {
+        加密的 API Key 数组
+        [{id, name, ek:{c,i}, url, notes, ...}]
+    }
+    storage "vault_theme" as THEME {
+        dark / white / anime
+    }
+}
+
+package "浏览器 API" as BAPI {
+    [Web Crypto API\n(密码学操作)] as WEBCRYPTO
+    [Clipboard API\n(复制到剪贴板)] as CLIPBOARD
+    [Pointer Events\n(手势触摸)] as POINTER
+    [SheetJS (xlsx)\n(Excel 导出)] as XLSX
+}
+
+' 连接关系
+MAIN --> MAINSCR : 创建窗口
+
+INIT --> SETUP : 首次使用
+INIT --> LOCK : 有配置/未免密
+INIT --> MAINSCR : 免密模式
+
+SETUPFLOW --> SETUP : 绑定UI事件
+SETUPFLOW --> CRYPTO : 密钥派生/加密
+
+LOCKFLOW --> LOCK : 绑定UI事件
+LOCKFLOW --> CRYPTO : 验证/解密
+
+KEYMGR --> MAINSCR : 渲染卡片
+KEYMGR --> MODALS : 弹窗操作
+KEYMGR --> CRYPTO : 加密/解密 API Key
+
+SETTMGR --> MODALS : 设置弹窗
+SETTMGR --> CRYPTO : 密码变更
+SETTMGR --> GESTURE : 手势管理
+
+EXPORT --> XLSX : 生成 Excel
+KEYMGR --> CLIPBOARD : 复制 Key
+GESTURE --> POINTER : 触摸/指针事件
+
+CRYPTO --> WEBCRYPTO : 调用加密原语
+
+STORAGE --> LS : 读写 localStorage
+SETUPFLOW --> STORAGE : 保存初始配置
+LOCKFLOW --> STORAGE : 加载配置
+KEYMGR --> STORAGE : 加载/保存数据
+
+note right of CRYPTO
+  密钥层次:
+  password → PBKDF2 → AES主密钥(mk)
+  gesture  → PBKDF2 → gestureKey → 包裹mk
+  'VaultNoLock' → PBKDF2 → noLockKey → 包裹mk
+  mk → AES-256-GCM → 加密每个API Key
+end note
+
+@enduml
