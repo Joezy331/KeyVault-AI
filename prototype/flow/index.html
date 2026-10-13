@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1500">
+<title>KeyVault AI · 产品流程图</title>
+<link rel="stylesheet" href="flow.css">
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="kicker">KeyVault AI · 产品流程图</div>
+    <h1>产品流程图</h1>
+    <p class="sub">从安全的密钥管理，到可执行的用量洞察。</p>
+    <div class="tagline">管理&nbsp;→&nbsp;使用&nbsp;→&nbsp;记录&nbsp;→&nbsp;分析&nbsp;→&nbsp;优化</div>
+  </header>
+
+  <!-- 01 · 完整产品流程图 -->
+  <section class="section" id="sec-full">
+    <div class="section-head">
+      <div class="no">01 / 完整产品流程图</div>
+      <h2>完整产品流程图</h2>
+      <p>以 Dashboard 为中心向外发散：左侧管理 API Key，中央发起请求并形成「使用 → 记录 → 分析」数据闭环，右侧独立的安全分支，底部 Activity / Settings 作为反馈辅助。橙色高亮即产品核心闭环。</p>
+    </div>
+    <div class="flow-scroll">
+      <div id="d-full" class="flow-canvas"></div>
+    </div>
+    <div class="legend">
+      <div class="item"><span class="sw l1"></span> 一级 · 核心页面</div>
+      <div class="item"><span class="sw l2"></span> 二级 · 核心操作</div>
+      <div class="item"><span class="sw l3"></span> 三级 · 具体行为</div>
+      <div class="item"><span class="ln"></span> 核心闭环（Accent）</div>
+      <div class="item"><span class="ln n"></span> 普通流程</div>
+      <div class="item"><span class="ln d"></span> 反馈回流（虚线）</div>
+      <div class="item" style="margin-left:auto;color:#B8AFA2">悬停节点看说明 · 点击跳转原型页</div>
+    </div>
+  </section>
+
+  <!-- 02 · Portfolio Flow -->
+  <section class="section" id="sec-portfolio">
+    <div class="section-head">
+      <div class="no">02 / 作品集简版</div>
+      <h2>作品集简版流程图</h2>
+      <p>一页可放的主路径：Unlock → Dashboard → API Keys → Playground → Request → Usage Log → Analytics → 回到 Dashboard，并从 Dashboard 分出 Security Center。适合直接截图放进作品集。</p>
+    </div>
+    <div class="flow-scroll">
+      <div id="d-portfolio" class="flow-canvas"></div>
+    </div>
+  </section>
+
+  <!-- 03 · 核心数据闭环 -->
+  <section class="section" id="sec-core">
+    <div class="section-head">
+      <div class="no">03 / 核心数据闭环</div>
+      <h2>API 使用数据闭环</h2>
+      <p>整个项目最重要的产品逻辑：一次 API 请求不是终点，而是数据分析的起点。API Keys → Playground → Request → Usage Log → Analytics → Dashboard → 回到 API Keys，形成数据闭环。</p>
+    </div>
+    <div class="flow-scroll">
+      <div id="d-core" class="flow-canvas"></div>
+    </div>
+  </section>
+
+  <!-- 04 · Security 分支 -->
+  <section class="section" id="sec-security">
+    <div class="section-head">
+      <div class="no">04 / 安全防护</div>
+      <h2>安全防护分支</h2>
+      <p>Security Center 独立成支：评分 → 六项检查 → 建议 → 状态，最终安全态势反馈回 Dashboard，形成安全管理闭环。</p>
+    </div>
+    <div class="flow-scroll">
+      <div id="d-security" class="flow-canvas"></div>
+    </div>
+  </section>
+
+  <!-- 05 · Activity / Settings -->
+  <section class="section" id="sec-activity">
+    <div class="section-head">
+      <div class="no">05 / 辅助分支</div>
+      <h2>活动与设置辅助分支</h2>
+      <p>本地审计日志与设置项，所有事件与偏好最终反馈回 Dashboard，支撑产品透明度与可解释性。</p>
+    </div>
+    <div class="flow-scroll">
+      <div id="d-activity" class="flow-canvas"></div>
+    </div>
+  </section>
+
+  <!-- 06 · 核心使用逻辑流程图 -->
+  <section class="section" id="sec-logic">
+    <div class="section-head">
+      <div class="no">06 / 逻辑流程图</div>
+      <h2>核心使用逻辑流程图</h2>
+      <p>经典判定式视角：从启动、主密码校验，到发送请求、记录用量与安全加固的完整判定逻辑。菱形为判断节点，蓝色为处理步骤，虚线为异常与反馈分支——展示产品在每一个分叉点上的行为。</p>
+    </div>
+    <div class="flow-scroll">
+      <div id="d-logic" class="flow-canvas"></div>
+    </div>
+    <div class="legend">
+      <div class="item"><span class="sw pill"></span> 开始 / 结束</div>
+      <div class="item"><span class="sw proc"></span> 处理步骤</div>
+      <div class="item"><span class="sw dia"></span> 判断节点</div>
+      <div class="item"><span class="ln d"></span> 异常 / 反馈分支</div>
+      <div class="item" style="margin-left:auto;color:#B8AFA2">悬停节点看说明 · 点击跳转原型页</div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p>KeyVault AI —— 本地优先的 API Key 管理器与用量分析工具。流程图节点可点击跳转至对应高保真原型页（<code>../app.html</code>）。核心表达：围绕 API 使用行为形成数据闭环的本地工具，而不只是一个 API Key 管理器。</p>
+  </footer>
+
+</div>
+<script src="flow.js"></script>
+</body>
+</html>

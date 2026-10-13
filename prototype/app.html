@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>KeyVault AI · 可交互原型（深色 · 中文）</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  /* ===== 交互专用样式（不影响导出版式） ===== */
+  .nav-item, .btn, .tag, .toggle, .seg .opt, .search { cursor: pointer; user-select: none; }
+  .nav-item:hover:not(.active) { background: var(--surface); color: var(--text); }
+  .btn:hover { border-color: var(--text); }
+  .btn.primary:hover { background: #fff; }
+  .btn.danger:hover { background: var(--neg-soft); }
+  .toggle:hover { filter: brightness(1.15); }
+  .seg .opt:hover:not(.on) { color: var(--text); border-color: var(--text); }
+  .tag:hover { color: var(--text); border-color: var(--text); }
+  .card-key-val, .masked, textarea.input, input.input { cursor: text; }
+  #lock-screen[hidden], #app-shell[hidden], .view[hidden], #deleteModal[hidden], #toast[hidden] { display: none; }
+
+  /* 锁定页 */
+  #lock-screen.unlock-wrap { min-height: 760px; align-items: center; justify-content: center; padding: 64px 24px; }
+  .unlock .right .pw { width: 100%; height: 42px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+    background: var(--surface-2); padding: 0 14px; color: var(--text); font-size: 14px; font-family: var(--font); outline: none; }
+  .unlock .right .pw:focus { border-color: var(--text); }
+
+  /* 视图切换 */
+  .view { display: block; }
+  .view[hidden] { display: none; }
+
+  /* 高亮可点击的"链接"式文字 */
+  a.lnk { color: var(--muted); cursor: pointer; }
+  a.lnk:hover { color: var(--text); }
+
+  /* 删除弹窗（全局浮层） */
+  #deleteModal.modal-scrim { position: fixed; inset: 0; z-index: 50; }
+
+  /* Toast */
+  #toast { position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%);
+    background: var(--surface); border: 1px solid var(--border-strong); color: var(--text);
+    padding: 10px 18px; border-radius: var(--radius-sm); font-size: 13px; z-index: 80;
+    box-shadow: 0 6px 24px rgba(0,0,0,.4); }
+
+  /* 注释面板跟随视图 */
+  .notes[hidden] { display: none; }
+  .notes-head { display:flex;align-items:center;justify-content:space-between;margin-bottom:2px }
+  .notes-head .ttl { font-size:13px;font-weight:600;letter-spacing:.02em }
+</style>
+</head>
+<body>
+
+<!-- ============ 锁定 / 解锁页（01） ============ -->
+<div id="lock-screen" class="unlock-wrap">
+  <div class="unlock">
+    <div class="left">
+      <div class="big-logo">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11V8a6 6 0 0 1 12 0v3"/><rect x="4" y="11" width="16" height="9" rx="2"/></svg>
+      </div>
+      <div class="t1">KeyVault</div>
+      <div class="t2">本地优先的 AI API Key 保险库。<br>所有密钥在本地以 AES-256-GCM 加密，<br>数据不出本机。</div>
+      <div style="height:8px"></div>
+      <div style="display:flex;gap:10px;color:var(--faint);font-size:12.5px">
+        <span style="display:flex;gap:6px;align-items:center"><span class="dot"></span>已加密</span>
+        <span style="display:flex;gap:6px;align-items:center"><span class="dot"></span>本地存储</span>
+        <span style="display:flex;gap:6px;align-items:center"><span class="dot"></span>零云端同步</span>
+      </div>
+    </div>
+    <div class="right">
+      <div class="wt">解锁保险库</div>
+      <div class="ws">输入主密码以查看你的密钥与用量</div>
+      <div style="height:18px"></div>
+      <input class="pw" id="pwInput" type="password" placeholder="输入主密码" autocomplete="off">
+      <div style="height:14px"></div>
+      <button class="btn primary block" id="unlockBtn" style="height:42px;font-size:14px">解锁</button>
+      <div style="font-size:11.5px;color:var(--faint);margin-top:14px;line-height:1.6">
+        演示原型：任意密码均可解锁。<br>连续 5 次失败将临时锁定（演示中不触发）。
+      </div>
+    </div>
+  </div>
+
+  <div class="notes" id="lockNotes" hidden>
+    <div class="notes-head"><span class="ttl">作品集注释</span></div>
+    <div id="lockNotesBody"></div>
+  </div>
+</div>
+
+<!-- ============ 应用外壳 ============ -->
+<div id="app-shell" class="proto" hidden>
+  <div class="app">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div class="main">
+      <header class="header" id="topbar">
+        <div>
+          <div class="ht" id="ht">总览</div>
+          <div class="hsub" id="hsub">密钥与调用量一览</div>
+        </div>
+        <div class="header-right">
+          <div class="search" id="searchBox">搜索密钥…</div>
+          <button class="btn sm" id="notesToggle" title="显示 / 隐藏作品集注释">注释</button>
+          <div class="avatar">江</div>
+        </div>
+      </header>
+
+      <div class="content" id="content">
+
+        <!-- 02 总览 -->
+        <section class="view" data-view="dashboard">
+          <div class="grid cols-4" style="margin-bottom:14px">
+            <div class="card stat"><div class="label">密钥总数</div><div class="num">12</div><div class="delta">本季度已轮换 3 个</div></div>
+            <div class="card stat"><div class="label">服务商</div><div class="num">8</div><div class="delta">已接入来源</div></div>
+            <div class="card stat"><div class="label">总请求数</div><div class="num">1,284</div><div class="delta">近 30 天 · 真实本地请求</div></div>
+            <div class="card stat"><div class="label">安全评分</div><div class="num">92<span style="font-size:15px;color:var(--faint)">/100</span></div><div class="delta up">2 项待处理</div></div>
+          </div>
+          <div class="grid cols-2" style="margin-bottom:14px">
+            <div class="card">
+              <div class="card-title">用量趋势
+                <span class="meta seg">
+                  <span class="opt on" data-seg="range">今日</span>
+                  <span class="opt" data-seg="range">7天</span>
+                  <span class="opt" data-seg="range">30天</span>
+                </span>
+              </div>
+              <svg class="chart" viewBox="0 0 520 160" preserveAspectRatio="none">
+                <line x1="0" y1="40"  x2="520" y2="40"  stroke="#26262B"/>
+                <line x1="0" y1="80"  x2="520" y2="80"  stroke="#26262B"/>
+                <line x1="0" y1="120" x2="520" y2="120" stroke="#26262B"/>
+                <polyline points="0,120 60,100 120,110 180,80 240,90 300,55 360,70 420,40 480,50 520,30" fill="none" stroke="#EAEAEA" stroke-width="2" stroke-linejoin="round"/>
+              </svg>
+              <div style="display:flex;justify-content:space-between;color:var(--faint);font-size:11px;margin-top:6px"><span>请求数</span><span>周一 — 周日</span></div>
+            </div>
+            <div class="card">
+              <div class="card-title">服务商分析 <span class="meta">点击服务商查看详情</span></div>
+              <div class="bars">
+                <div class="bar-row"><span>OpenAI</span><div class="bar-track"><div class="bar-fill" style="width:82%"></div></div><span>512</span></div>
+                <div class="bar-row"><span>DeepSeek</span><div class="bar-track"><div class="bar-fill" style="width:54%"></div></div><span>338</span></div>
+                <div class="bar-row"><span>Claude</span><div class="bar-track"><div class="bar-fill" style="width:33%"></div></div><span>206</span></div>
+                <div class="bar-row"><span>Gemini</span><div class="bar-track"><div class="bar-fill soft" style="width:18%"></div></div><span>112</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="grid cols-2">
+            <div class="card">
+              <div class="card-title">最近活动 <span class="meta">来自本地事件日志</span></div>
+              <div class="row" style="padding:8px 0;border-bottom:1px solid var(--border)"><span class="dot"></span><div style="flex:1"><div class="name" style="font-size:13px">新增密钥</div><div class="meta">OpenAI · 生产环境</div></div><span class="meta">10 分钟前</span></div>
+              <div class="row" style="padding:8px 0;border-bottom:1px solid var(--border)"><span class="dot"></span><div style="flex:1"><div class="name" style="font-size:13px">API 请求</div><div class="meta">DeepSeek · DeepSeek Chat</div></div><span class="meta">30 分钟前</span></div>
+              <div class="row" style="padding:8px 0"><span class="dot"></span><div style="flex:1"><div class="name" style="font-size:13px">保险库已解锁</div><div class="meta">主密码</div></div><span class="meta">今天</span></div>
+            </div>
+            <div class="card">
+              <div class="card-title">安全总览</div>
+              <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:12px"><span style="font-size:30px;font-weight:600">92</span><span style="color:var(--faint)">/ 100</span></div>
+              <div style="font-size:13px;color:var(--muted);line-height:2">✓ 主密码已设置<br>✓ 本地加密（AES-256-GCM）<br>✓ 自动锁定已开启</div>
+              <button class="btn sm" style="margin-top:12px" data-goto="security">查看安全中心</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 03 密钥 -->
+        <section class="view" data-view="apikeys">
+          <div class="content-head" style="display:flex;align-items:flex-end;justify-content:space-between">
+            <div><h1>密钥</h1><p>安全存储与管理你的 AI API Key</p></div>
+            <div style="display:flex;gap:10px">
+              <button class="btn" data-goto="empty">导入</button>
+              <button class="btn primary" data-goto="addkey">添加 API Key</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-bottom:14px">
+            <div class="seg" style="width:300px">
+              <span class="opt on" data-seg="env">全部</span>
+              <span class="opt" data-seg="env">生产环境</span>
+              <span class="opt" data-seg="env">测试环境</span>
+            </div>
+            <input class="input" id="keySearch" style="width:240px;color:var(--faint);font-size:12.5px" placeholder="搜索名称、标签…">
+          </div>
+          <div class="keylist" id="keyList">
+            <div class="card keycard"><div class="pbadge">O</div><div class="info"><div class="kname">OpenAI 生产主密钥 <span class="pill pos" style="margin-left:6px">启用</span></div><div class="kmeta">OpenAI · 生产环境 · 标签：主力 · 最近使用 2 小时前</div></div><div class="masked">sk-••••••••••••3fA2</div><div class="acts"><button class="btn sm" data-toast="已复制（演示）">复制</button><button class="btn sm" data-reveal>显示</button><button class="btn sm" data-goto="keydetail">详情</button></div></div>
+            <div class="card keycard"><div class="pbadge">D</div><div class="info"><div class="kname">DeepSeek 对话服务 <span class="pill pos" style="margin-left:6px">启用</span></div><div class="kmeta">DeepSeek · 生产环境 · 标签：对话 · 最近使用 昨天</div></div><div class="masked">sk-••••••••••••9c71</div><div class="acts"><button class="btn sm" data-toast="已复制（演示）">复制</button><button class="btn sm" data-reveal>显示</button><button class="btn sm" data-goto="keydetail">详情</button></div></div>
+            <div class="card keycard"><div class="pbadge">C</div><div class="info"><div class="kname">Claude 测试令牌 <span class="pill warn" style="margin-left:6px">待轮换</span></div><div class="kmeta">Claude · 测试环境 · 标签：实验 · 已使用 92 天</div></div><div class="masked">sk-••••••••••••b40e</div><div class="acts"><button class="btn sm" data-toast="已复制（演示）">复制</button><button class="btn sm" data-reveal>显示</button><button class="btn sm" data-goto="keydetail">详情</button></div></div>
+            <div class="card keycard"><div class="pbadge">G</div><div class="info"><div class="kname">Gemini 备份密钥 <span class="pill neu" style="margin-left:6px">停用</span></div><div class="kmeta">Gemini · 测试环境 · 标签：备份 · 最近使用 上月</div></div><div class="masked">AI••••••••••••••7d3</div><div class="acts"><button class="btn sm" data-toast="已复制（演示）">复制</button><button class="btn sm" data-reveal>显示</button><button class="btn sm" data-goto="keydetail">详情</button></div></div>
+          </div>
+        </section>
+
+        <!-- 04 添加密钥 -->
+        <section class="view" data-view="addkey">
+          <div class="content-head"><h1>添加 API Key</h1><p>密文写入本地保险库，仅在解锁后可读取</p></div>
+          <div class="grid" style="grid-template-columns:1fr 320px">
+            <div class="card">
+              <div class="field"><label>快速选择</label><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="tag">OpenAI</span><span class="tag">DeepSeek</span><span class="tag">Claude</span><span class="tag">Gemini</span><span class="tag">Qwen</span><span class="tag">Moonshot</span></div></div>
+              <div class="field"><label>名称 *</label><input class="input" value="OpenAI 生产主密钥"></div>
+              <div class="field"><label>服务商</label><div class="select"><span>OpenAI</span><span class="chev">▾</span></div></div>
+              <div class="field"><label>API Key *</label><input class="input ph" value="sk-••••••••••••••••••••3fA2"><div style="font-size:11.5px;color:var(--faint);margin-top:6px">保存后立即以 AES-256-GCM 加密，明文不再落盘</div></div>
+              <div class="field"><label>环境</label><div class="seg"><span class="opt on" data-seg="envForm">生产环境</span><span class="opt" data-seg="envForm">测试环境</span></div></div>
+              <div class="field"><label>标签</label><input class="input ph" value="主力，对话（逗号分隔）"></div>
+              <div class="field"><label>URL / 备注地址</label><input class="input ph" value="https://api.openai.com/v1"></div>
+              <div class="field" style="margin-bottom:0"><label>备注</label><textarea class="input">主力账号，用于对话服务与批量任务</textarea></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div class="card">
+                <div class="card-title">状态</div>
+                <div class="seg"><span class="opt on" data-seg="statusForm">启用</span><span class="opt" data-seg="statusForm">停用</span></div>
+                <div class="divider" style="margin-top:14px"></div>
+                <div style="font-size:12.5px;color:var(--muted);line-height:1.9">创建时间：保存时生成<br>轮换提醒：90 天后<br>所属保险库：本机</div>
+              </div>
+              <div class="card">
+                <div class="card-title">保存前检查</div>
+                <div style="font-size:12.5px;color:var(--muted);line-height:2">✓ 名称已填写<br>✓ Key 格式通过校验<br>✓ 服务商已识别</div>
+                <div style="display:flex;gap:10px;margin-top:16px">
+                  <button class="btn" style="flex:1;justify-content:center" data-goto="apikeys">取消</button>
+                  <button class="btn primary" style="flex:1;justify-content:center" id="saveKeyBtn">保存</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 05 密钥详情 -->
+        <section class="view" data-view="keydetail">
+          <div style="margin-bottom:14px"><a class="lnk" data-goto="apikeys">← 返回列表</a></div>
+          <div class="card" style="margin-bottom:14px;display:flex;align-items:center;gap:14px">
+            <div class="pbadge" style="width:34px;height:34px;flex:0 0 34px;font-size:14px">O</div>
+            <div style="flex:1"><div style="font-size:16px;font-weight:600">OpenAI 生产主密钥 <span class="pill pos" style="margin-left:6px">启用</span></div><div class="masked" style="margin-top:4px">sk-••••••••••••3fA2</div></div>
+            <div style="display:flex;gap:8px">
+              <button class="btn" data-toast="已复制（演示）">复制</button>
+              <button class="btn" data-reveal>显示</button>
+              <button class="btn" data-toast="已轮换（演示）">轮换</button>
+              <button class="btn danger" data-action="delete-key">删除</button>
+            </div>
+          </div>
+          <div class="grid cols-2" style="margin-bottom:14px">
+            <div class="card"><div class="card-title">元数据</div><table class="tbl">
+              <tr><td style="color:var(--muted)">服务商</td><td style="text-align:right">OpenAI</td></tr>
+              <tr><td style="color:var(--muted)">环境</td><td style="text-align:right">生产环境</td></tr>
+              <tr><td style="color:var(--muted)">标签</td><td style="text-align:right">主力</td></tr>
+              <tr><td style="color:var(--muted)">创建时间</td><td style="text-align:right">2026-06-18</td></tr>
+              <tr><td style="color:var(--muted)">最近使用</td><td style="text-align:right">2 小时前</td></tr>
+              <tr><td style="color:var(--muted)">累计请求</td><td style="text-align:right">512</td></tr>
+            </table></div>
+            <div class="card"><div class="card-title">近 7 天调用 <span class="meta">来自真实请求</span></div><div class="bars" style="margin-bottom:6px">
+              <div class="bar-row"><span>周一</span><div class="bar-track"><div class="bar-fill" style="width:62%"></div></div><span>48</span></div>
+              <div class="bar-row"><span>周二</span><div class="bar-track"><div class="bar-fill" style="width:78%"></div></div><span>61</span></div>
+              <div class="bar-row"><span>周三</span><div class="bar-track"><div class="bar-fill" style="width:44%"></div></div><span>34</span></div>
+              <div class="bar-row"><span>周四</span><div class="bar-track"><div class="bar-fill" style="width:88%"></div></div><span>69</span></div>
+              <div class="bar-row"><span>周五</span><div class="bar-track"><div class="bar-fill" style="width:70%"></div></div><span>55</span></div>
+              <div class="bar-row"><span>周六</span><div class="bar-track"><div class="bar-fill soft" style="width:22%"></div></div><span>17</span></div>
+              <div class="bar-row"><span>周日</span><div class="bar-track"><div class="bar-fill soft" style="width:16%"></div></div><span>12</span></div>
+            </div></div>
+          </div>
+          <div class="card"><div class="card-title">此密钥的活动 <span class="meta">来自真实本地事件日志</span></div><table class="tbl">
+            <tr><td style="width:120px;color:var(--faint);font-size:12px">今天 09:42</td><td>API 请求</td><td style="color:var(--muted)">gpt-4o-mini · 200 · 1.2s</td><td style="text-align:right"><a class="lnk" data-goto="requestdetail">请求详情</a></td></tr>
+            <tr><td style="color:var(--faint);font-size:12px">今天 09:31</td><td>API 请求</td><td style="color:var(--muted)">gpt-4o-mini · 200 · 0.9s</td><td style="text-align:right"><a class="lnk" data-goto="requestdetail">请求详情</a></td></tr>
+            <tr><td style="color:var(--faint);font-size:12px">昨天 21:05</td><td>复制密钥</td><td style="color:var(--muted)">已计入审计</td><td></td></tr>
+            <tr><td style="color:var(--faint);font-size:12px">2026-06-18</td><td>新增密钥</td><td style="color:var(--muted)">OpenAI · 生产环境</td><td></td></tr>
+          </table></div>
+        </section>
+
+        <!-- 06 测试台 -->
+        <section class="view" data-view="playground">
+          <div class="content-head"><h1>测试台</h1><p>选择 Key 向服务商发起真实请求并自动记录用量</p></div>
+          <div class="grid cols-2" style="align-items:start">
+            <div class="card">
+              <div class="card-title">请求</div>
+              <div class="field"><label>选择密钥</label><div class="select"><span>OpenAI 生产主密钥（sk-••••3fA2）</span><span class="chev">▾</span></div></div>
+              <div class="field"><label>方法与地址</label><div style="display:flex;gap:8px"><div class="select" style="width:96px;flex:0 0 96px"><span>POST</span><span class="chev">▾</span></div><input class="input" style="font-family:var(--mono);font-size:12.5px" value="https://api.openai.com/v1/chat/completions"></div></div>
+              <div class="field"><label>请求头</label><textarea class="input" style="min-height:64px">Content-Type: application/json
+Authorization: Bearer ••••••••••••（自动注入）</textarea></div>
+              <div class="field" style="margin-bottom:0"><label>请求体</label><textarea class="input" style="min-height:120px">{
+  'model': 'gpt-4o-mini',
+  'messages': [
+    { 'role': 'user', 'content': '你好' }
+  ]
+}</textarea></div>
+              <button class="btn primary" id="sendBtn" style="margin-top:14px;width:100%;justify-content:center;height:38px">发送请求</button>
+              <div style="font-size:11.5px;color:var(--faint);margin-top:8px;line-height:1.6">明文 Key 仅在请求瞬间解密使用，不写入任何日志</div>
+            </div>
+            <div class="card">
+              <div class="card-title">响应 <span class="meta" id="respMeta">等待发送</span></div>
+              <textarea class="input" id="respBody" style="min-height:280px;font-size:12.5px" readonly placeholder="点击「发送请求」后，此处显示响应结果">{
+  'id': 'chatcmpl-9fA2',
+  'object': 'chat.completion',
+  'model': 'gpt-4o-mini',
+  'choices': [
+    { 'index': 0, 'message': { 'role': 'assistant', 'content': '你好' }, 'finish_reason': 'stop' }
+  ],
+  'usage': { 'prompt_tokens': 8, 'completion_tokens': 2, 'total_tokens': 10 }
+}</textarea>
+              <div class="divider" style="margin-top:16px"></div>
+              <div style="font-size:12.5px;color:var(--muted);line-height:1.9">本次请求已计入用量统计<br>可在活动页查看该条记录</div>
+              <div style="display:flex;gap:10px;margin-top:12px"><button class="btn sm" data-toast="已复制（演示）">复制响应</button><button class="btn sm" data-goto="requestdetail">查看请求详情</button></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 07 用量 -->
+        <section class="view" data-view="usage">
+          <div class="content-head" style="display:flex;align-items:flex-end;justify-content:space-between">
+            <div><h1>用量</h1><p>本地 API 使用统计，全部来自真实请求</p></div>
+            <div class="seg" style="width:260px"><span class="opt" data-seg="range2">今日</span><span class="opt on" data-seg="range2">7天</span><span class="opt" data-seg="range2">30天</span></div>
+          </div>
+          <div class="grid cols-4" style="margin-bottom:14px">
+            <div class="card stat"><div class="label">请求总数</div><div class="num">296</div><div class="delta">较上周 +18%</div></div>
+            <div class="card stat"><div class="label">失败请求</div><div class="num">7</div><div class="delta">失败率 2.4%</div></div>
+            <div class="card stat"><div class="label">平均耗时</div><div class="num">1.18<span style="font-size:15px;color:var(--faint)">s</span></div><div class="delta">TTFB 0.42s</div></div>
+            <div class="card stat"><div class="label">活跃密钥</div><div class="num">5</div><div class="delta">共 12 个密钥</div></div>
+          </div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-title">用量趋势 <span class="meta">真实本地请求趋势</span></div>
+            <svg class="chart" viewBox="0 0 1000 220" preserveAspectRatio="none" style="height:220px">
+              <line x1="0" y1="55" x2="1000" y2="55" stroke="#26262B"/><line x1="0" y1="110" x2="1000" y2="110" stroke="#26262B"/><line x1="0" y1="165" x2="1000" y2="165" stroke="#26262B"/>
+              <g fill="#33333A"><rect x="20" y="120" width="90" height="100" rx="3"/><rect x="160" y="95" width="90" height="125" rx="3"/><rect x="300" y="140" width="90" height="80" rx="3"/><rect x="440" y="70" width="90" height="150" rx="3"/><rect x="580" y="105" width="90" height="115" rx="3"/><rect x="720" y="45" width="90" height="175" rx="3"/><rect x="860" y="150" width="90" height="70" rx="3"/></g>
+            </svg>
+            <div style="display:flex;justify-content:space-between;color:var(--faint);font-size:11px;margin-top:6px;padding:0 10px"><span>周一</span><span>周二</span><span>周三</span><span>周四</span><span>周五</span><span>周六</span><span>周日</span></div>
+          </div>
+          <div class="grid cols-2">
+            <div class="card"><div class="card-title">服务商分析</div><table class="tbl">
+              <thead><tr><th>服务商</th><th style="text-align:right">请求</th><th style="text-align:right">失败</th><th style="text-align:right">平均耗时</th></tr></thead>
+              <tr><td>OpenAI</td><td style="text-align:right">512</td><td style="text-align:right">3</td><td style="text-align:right">1.32s</td></tr>
+              <tr><td>DeepSeek</td><td style="text-align:right">338</td><td style="text-align:right">2</td><td style="text-align:right">0.94s</td></tr>
+              <tr><td>Claude</td><td style="text-align:right">206</td><td style="text-align:right">1</td><td style="text-align:right">1.48s</td></tr>
+              <tr><td>Gemini</td><td style="text-align:right">112</td><td style="text-align:right">1</td><td style="text-align:right">1.05s</td></tr>
+            </table></div>
+            <div class="card"><div class="card-title">按密钥排行 <span class="meta">点击查看详情</span></div><div class="bars">
+              <div class="bar-row"><span>OpenAI 主密钥</span><div class="bar-track"><div class="bar-fill" style="width:88%"></div></div><span>512</span></div>
+              <div class="bar-row"><span>DeepSeek 对话</span><div class="bar-track"><div class="bar-fill" style="width:58%"></div></div><span>338</span></div>
+              <div class="bar-row"><span>Claude 测试</span><div class="bar-track"><div class="bar-fill" style="width:36%"></div></div><span>206</span></div>
+              <div class="bar-row"><span>Gemini 备份</span><div class="bar-track"><div class="bar-fill soft" style="width:20%"></div></div><span>112</span></div>
+              <div class="bar-row"><span>Qwen 实验</span><div class="bar-track"><div class="bar-fill soft" style="width:12%"></div></div><span>68</span></div>
+            </div></div>
+          </div>
+        </section>
+
+        <!-- 08 安全中心 -->
+        <section class="view" data-view="security">
+          <div class="content-head"><h1>安全中心</h1><p>基于真实规则的安全评分与风险检测</p></div>
+          <div class="grid cols-3" style="margin-bottom:14px">
+            <div class="card stat"><div class="label">安全评分</div><div class="num">92<span style="font-size:15px;color:var(--faint)">/100</span></div><div class="delta up">较上周 +4</div></div>
+            <div class="card stat"><div class="label">待轮换密钥</div><div class="num">1</div><div class="delta">已使用超过 90 天</div></div>
+            <div class="card stat"><div class="label">风险项</div><div class="num">2</div><div class="delta">点击查看风险详情</div></div>
+          </div>
+          <div class="grid cols-2" style="margin-bottom:14px">
+            <div class="card"><div class="card-title">安全检查清单</div><div style="font-size:13px;line-height:2.1">
+              <div style="display:flex;justify-content:space-between"><span>✓ 主密码已设置</span><span class="pill pos">通过</span></div>
+              <div style="display:flex;justify-content:space-between"><span>✓ 本地加密（AES-256-GCM）</span><span class="pill pos">通过</span></div>
+              <div style="display:flex;justify-content:space-between"><span>✓ 自动锁定已开启</span><span class="pill pos">通过</span></div>
+              <div style="display:flex;justify-content:space-between"><span>✓ 无明文落盘</span><span class="pill pos">通过</span></div>
+              <div style="display:flex;justify-content:space-between"><span>! 1 个密钥超过 90 天未轮换</span><span class="pill warn">待处理</span></div>
+              <div style="display:flex;justify-content:space-between"><span>! 缺少快捷解锁手势</span><span class="pill warn">建议</span></div>
+            </div></div>
+            <div class="card"><div class="card-title">风险检测 <span class="meta">点击查看风险详情</span></div>
+              <div class="row" style="padding:10px 0;border-bottom:1px solid var(--border)"><span class="dot warn"></span><div style="flex:1"><div class="name" style="font-size:13px">Claude 测试令牌 · 长期未轮换</div><div class="meta">已使用 92 天 · 建议立即轮换</div></div><button class="btn sm" data-goto="keydetail">去轮换</button></div>
+              <div class="row" style="padding:10px 0"><span class="dot warn"></span><div style="flex:1"><div class="name" style="font-size:13px">未开启手势快捷解锁</div><div class="meta">不影响评分，建议开启以提升体验</div></div><button class="btn sm" data-goto="settings">去设置</button></div>
+            </div>
+          </div>
+          <div class="card"><div class="card-title">密钥轮换 <span class="meta">安全轮换流程（不会替你修改第三方平台）</span></div><table class="tbl">
+            <thead><tr><th>密钥</th><th>服务商</th><th>已使用</th><th>状态</th><th style="text-align:right">操作</th></tr></thead>
+            <tr><td>OpenAI 生产主密钥</td><td>OpenAI</td><td>32 天</td><td><span class="pill pos">正常</span></td><td style="text-align:right"><button class="btn sm" data-toast="已轮换（演示）">轮换</button></td></tr>
+            <tr><td>Claude 测试令牌</td><td>Claude</td><td>92 天</td><td><span class="pill warn">待轮换</span></td><td style="text-align:right"><button class="btn sm" data-toast="已轮换（演示）">轮换</button></td></tr>
+            <tr><td>Gemini 备份密钥</td><td>Gemini</td><td>58 天</td><td><span class="pill neg">已停用</span></td><td style="text-align:right"><button class="btn sm" data-toast="已启用（演示）">启用</button></td></tr>
+          </table></div>
+        </section>
+
+        <!-- 09 活动 -->
+        <section class="view" data-view="activity">
+          <div class="content-head"><h1>活动</h1><p>来自真实本地事件日志，按分类筛选</p></div>
+          <div style="display:flex;gap:8px;margin-bottom:14px" id="activityChips">
+            <span class="tag act-chip on" data-cat="全部">全部</span>
+            <span class="tag act-chip" data-cat="密钥">密钥</span>
+            <span class="tag act-chip" data-cat="请求">请求</span>
+            <span class="tag act-chip" data-cat="安全">安全</span>
+            <span class="tag act-chip" data-cat="系统">系统</span>
+          </div>
+          <div class="card"><div class="card-title">活动日志 <span class="meta">超出留存期自动清理</span></div><table class="tbl" id="activityTable">
+            <thead><tr><th style="width:130px">时间</th><th style="width:110px">分类</th><th>事件</th><th>详情</th><th style="text-align:right">来源</th></tr></thead>
+            <tr data-cat="请求"><td style="color:var(--faint);font-size:12px">今天 10:12</td><td><span class="pill neu">请求</span></td><td>API 请求</td><td style="color:var(--muted)">OpenAI · gpt-4o-mini · 200 · 1.2s</td><td style="text-align:right"><a class="lnk" data-goto="requestdetail">请求详情</a></td></tr>
+            <tr data-cat="密钥"><td style="color:var(--faint);font-size:12px">今天 09:58</td><td><span class="pill neu">密钥</span></td><td>复制密钥</td><td style="color:var(--muted)">OpenAI 生产主密钥</td><td style="text-align:right;color:var(--faint);font-size:12px">本机</td></tr>
+            <tr data-cat="请求"><td style="color:var(--faint);font-size:12px">今天 09:31</td><td><span class="pill neu">请求</span></td><td>API 请求</td><td style="color:var(--muted)">DeepSeek · DeepSeek Chat · 200 · 0.9s</td><td style="text-align:right"><a class="lnk" data-goto="requestdetail">请求详情</a></td></tr>
+            <tr data-cat="安全"><td style="color:var(--faint);font-size:12px">今天 09:02</td><td><span class="pill neu">安全</span></td><td>保险库已解锁</td><td style="color:var(--muted)">主密码验证通过</td><td style="text-align:right;color:var(--faint);font-size:12px">本机</td></tr>
+            <tr data-cat="密钥"><td style="color:var(--faint);font-size:12px">昨天 21:05</td><td><span class="pill neu">密钥</span></td><td>新增密钥</td><td style="color:var(--muted)">DeepSeek 对话服务 · 生产环境</td><td style="text-align:right;color:var(--faint);font-size:12px">本机</td></tr>
+            <tr data-cat="安全"><td style="color:var(--faint);font-size:12px">昨天 20:47</td><td><span class="pill neu">安全</span></td><td>自动锁定</td><td style="color:var(--muted)">闲置 15 分钟后锁定</td><td style="text-align:right;color:var(--faint);font-size:12px">本机</td></tr>
+            <tr data-cat="系统"><td style="color:var(--faint);font-size:12px">昨天 18:22</td><td><span class="pill neu">系统</span></td><td>导出数据</td><td style="color:var(--muted)">已导出 12 条记录（加密）</td><td style="text-align:right;color:var(--faint);font-size:12px">本机</td></tr>
+          </table></div>
+        </section>
+
+        <!-- 10 设置 -->
+        <section class="view" data-view="settings">
+          <div class="content-head"><h1>设置</h1><p>主密码、快捷解锁、数据与主题</p></div>
+          <div class="card" style="margin-bottom:14px"><div class="card-title">保险库</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)"><div><div style="font-size:13.5px">修改主密码</div><div style="font-size:12px;color:var(--faint)">需先验证当前密码</div></div><button class="btn sm" data-toast="已打开修改（演示）">修改</button></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)"><div><div style="font-size:13.5px">快捷解锁</div><div style="font-size:12px;color:var(--faint)">手势密码，可稍后开启</div></div><div class="toggle on" data-toggle></div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0"><div><div style="font-size:13.5px">手势密码</div><div style="font-size:12px;color:var(--faint)">已设置</div></div><button class="btn sm" data-toast="已重置手势（演示）">重置手势</button></div>
+          </div>
+          <div class="card" style="margin-bottom:14px"><div class="card-title">数据</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)"><div><div style="font-size:13.5px">用量分析</div><div style="font-size:12px;color:var(--faint)">记录本地 API 用量，用于总览与用量页</div></div><div class="toggle on" data-toggle></div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)"><div><div style="font-size:13.5px">记录活动历史</div><div style="font-size:12px;color:var(--faint)">记录密钥增删改、复制、请求等事件</div></div><div class="toggle on" data-toggle></div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)"><div><div style="font-size:13.5px">数据留存</div><div style="font-size:12px;color:var(--faint)">超出后自动清理日志</div></div><div style="display:flex;gap:8px"><span class="tag" data-retention>7 天</span><span class="tag on" data-retention>30 天</span><span class="tag" data-retention>90 天</span><span class="tag" data-retention>1 年</span></div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0"><div><div style="font-size:13.5px">演示数据</div><div style="font-size:12px;color:var(--faint)">生成带标记的演示数据，不与真实数据混淆</div></div><button class="btn sm" data-toast="已重置演示数据（演示）">重置演示数据</button></div>
+          </div>
+          <div class="grid cols-2">
+            <div class="card"><div class="card-title">主题</div><div class="seg"><span class="opt on" data-seg="theme">深色</span><span class="opt" data-seg="theme">浅色</span><span class="opt" data-seg="theme">柔雾紫</span></div><div style="font-size:12px;color:var(--faint);margin-top:10px;line-height:1.7">当前：深色（默认）<br>主题仅影响外观，不影响加密方式</div></div>
+            <div class="card" style="border-color:var(--neg-soft)"><div class="card-title" style="color:var(--neg)">危险操作</div><div style="font-size:12.5px;color:var(--muted);line-height:1.7">重置所有数据将删除全部密钥、用量与日志，且无法恢复。</div><button class="btn danger" style="margin-top:12px" data-toast="已触发重置（演示，未真正删除）">重置所有数据</button></div>
+          </div>
+        </section>
+
+        <!-- 11 空状态 -->
+        <section class="view" data-view="empty">
+          <div class="content-head"><h1>密钥</h1><p>安全存储与管理你的 AI API Key</p></div>
+          <div class="empty" style="margin-bottom:14px">
+            <svg class="ill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11V8a6 6 0 0 1 12 0v3"/><rect x="4" y="11" width="16" height="9" rx="2"/></svg>
+            <h3>暂无数据</h3><p>开始使用你的第一个 API Key 吧</p>
+            <button class="btn primary" style="margin-top:6px" data-goto="addkey">添加 API Key</button>
+          </div>
+          <div class="grid cols-2">
+            <div class="card"><div class="card-title">搜索无结果</div><div class="empty" style="padding:34px 18px;border-style:dashed"><h3 style="font-size:15px">没有匹配的密钥</h3><p>换个关键词，或清除筛选条件后再试</p><button class="btn sm" style="margin-top:6px" id="clearFilter">清除筛选</button></div></div>
+            <div class="card"><div class="card-title">活动为空</div><div class="empty" style="padding:34px 18px;border-style:dashed"><h3 style="font-size:15px">还没有活动记录</h3><p>发起一次请求或添加一个密钥后，这里会自动记录</p><button class="btn sm" style="margin-top:6px" data-goto="playground">去测试台</button></div></div>
+          </div>
+        </section>
+
+        <!-- 13 请求详情 -->
+        <section class="view" data-view="requestdetail">
+          <div style="margin-bottom:14px"><a class="lnk" data-goto="activity">← 返回活动</a></div>
+          <div class="content-head"><h1>请求详情</h1><p>来自本地日志的真实请求记录</p></div>
+          <div class="card" style="margin-bottom:14px">
+            <div style="display:flex;align-items:center;gap:12px"><span class="tag" style="font-family:var(--mono)">POST</span><span style="font-family:var(--mono);font-size:12.5px;flex:1">https://api.openai.com/v1/chat/completions</span><span class="pill pos">200 OK</span></div>
+            <div class="divider" style="margin-top:14px"></div>
+            <div style="display:flex;gap:24px;font-size:12.5px;color:var(--muted)"><span>时间：今天 10:12</span><span>密钥：OpenAI 生产主密钥</span><span>模型：gpt-4o-mini</span></div>
+          </div>
+          <div class="card" style="margin-bottom:14px"><div class="card-title">时序</div><div class="bars">
+            <div class="bar-row"><span>DNS 解析</span><div class="bar-track"><div class="bar-fill soft" style="width:8%"></div></div><span>18ms</span></div>
+            <div class="bar-row"><span>TLS 握手</span><div class="bar-track"><div class="bar-fill soft" style="width:14%"></div></div><span>32ms</span></div>
+            <div class="bar-row"><span>首字节 TTFB</span><div class="bar-track"><div class="bar-fill" style="width:36%"></div></div><span>420ms</span></div>
+            <div class="bar-row"><span>总计</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><span>1.24s</span></div>
+          </div></div>
+          <div class="grid cols-2">
+            <div class="card"><div class="card-title">请求体</div><textarea class="input" style="min-height:180px" readonly>{
+  'model': 'gpt-4o-mini',
+  'messages': [
+    { 'role': 'user', 'content': '你好' }
+  ]
+}</textarea></div>
+            <div class="card"><div class="card-title">响应体 <span class="meta">512 B</span></div><textarea class="input" style="min-height:180px" readonly>{
+  'id': 'chatcmpl-9fA2',
+  'model': 'gpt-4o-mini',
+  'choices': [
+    { 'index': 0, 'message': { 'role': 'assistant', 'content': '你好' }, 'finish_reason': 'stop' }
+  ],
+  'usage': { 'total_tokens': 10 }
+}</textarea></div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 右侧作品集注释（按视图切换） -->
+  <div class="notes" id="notesPanel" hidden>
+    <div class="notes-head"><span class="ttl">作品集注释</span></div>
+    <div id="notesBody"></div>
+  </div>
+</div>
+
+<!-- ============ 全局删除确认弹窗（12） ============ -->
+<div class="modal-scrim" id="deleteModal" hidden>
+  <div class="modal">
+    <h3>删除这个密钥？</h3>
+    <p>将永久删除「OpenAI 生产主密钥」，删除后无法恢复。</p>
+    <p style="color:var(--faint);font-size:12.5px">该密钥的 512 条用量记录会保留，但不再关联密钥名称。</p>
+    <div class="field" style="margin-top:16px">
+      <label>请输入密钥名称以确认</label>
+      <input class="input" id="confirmName" placeholder="OpenAI 生产主密钥">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="cancelDelete">取消</button>
+      <button class="btn danger fill" id="confirmDelete" disabled>删除</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" hidden></div>
+
+<script>
+/* ===== 数据：导航 + 视图元信息 + 注释 ===== */
+const ICONS = {
+  dashboard: '<path d="M3 3h7v7H3zM14 3h7v4h-7zM14 10h7v11h-7zM3 13h7v8H3z"/>',
+  keys: '<path d="M14 7a4 4 0 1 0-3.4 3.9L4 17.5V21h3.5l.6-.6V18h1.9v-1.9h1.9l3.6-3.6A4 4 0 0 0 14 7z"/><circle cx="14" cy="10" r="1.4"/>',
+  usage: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  playground: '<path d="M5 5l6 7-6 7M13 19h6"/>',
+  security: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  activity: '<path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>',
+};
+const PAGES = [
+  { no:'02', id:'dashboard',  title:'总览',   sub:'密钥与调用量一览',                         group:'导航', icon:'dashboard' },
+  { no:'03', id:'apikeys',    title:'密钥',   sub:'安全存储与管理你的 AI API Key',            group:'导航', icon:'keys' },
+  { no:'07', id:'usage',      title:'用量',   sub:'本地 API 使用统计，全部来自真实请求',       group:'导航', icon:'usage' },
+  { no:'06', id:'playground', title:'测试台', sub:'选择 Key 向服务商发起真实请求并自动记录用量', group:'导航', icon:'playground' },
+  { no:'08', id:'security',   title:'安全',   sub:'基于真实规则的安全评分与风险检测',          group:'导航', icon:'security' },
+  { no:'09', id:'activity',   title:'活动',   sub:'来自真实本地事件日志，按分类筛选',          group:'导航', icon:'activity' },
+  { no:'10', id:'settings',   title:'设置',   sub:'主密码、快捷解锁、数据与主题',              group:'偏好', icon:'settings' },
+];
+const VIEW_TITLE = {
+  addkey:'添加 API Key', keydetail:'密钥详情', empty:'密钥', requestdetail:'请求详情'
+};
+const VIEW_SUB = {
+  addkey:'密文写入本地保险库', keydetail:'查看与管理单个 API Key', empty:'安全存储与管理你的 AI API Key', requestdetail:'来自本地日志的真实请求记录'
+};
+const NOTES = {
+  locked: '<div class="note"><h4><span class="pageno">01 · </span>解锁</h4></div><div class="note"><h4>页面目标</h4><p>用主密码解密本地保险库，是应用唯一入口。</p></div><div class="note"><h4>核心功能</h4><ul><li>主密码登录、手势解锁切换</li><li>记住本机、自动锁定提示</li></ul></div><div class="note"><h4>用户操作</h4><ul><li>输入主密码 → 解锁 → 进入总览</li></ul></div><div class="note"><h4>设计说明</h4><p>不展示侧栏与任何业务数据；左侧只讲"本地优先 + AES-256-GCM + PBKDF2"，用技术细节建立信任。</p></div>',
+  dashboard: '<div class="note"><h4><span class="pageno">02 · </span>总览</h4></div><div class="note"><h4>页面目标</h4><p>解锁后第一屏，用最少信息回答三个问题：我有多少密钥、用了多少、现在安全吗。</p></div><div class="note"><h4>核心功能</h4><ul><li>四项概览指标（密钥 / 服务商 / 请求 / 安全评分）</li><li>用量趋势（今日 / 7天 / 30天切换）</li><li>服务商调用分布</li><li>最近活动流 + 安全总览入口</li></ul></div><div class="note"><h4>用户操作</h4><ul><li>切换时间范围看趋势</li><li>点击服务商进入用量页明细</li><li>从安全总览进入安全中心处理待办</li></ul></div><div class="note"><h4>设计说明</h4><p>所有数字取自本地 用量日志，无数据时显示空态而不是示例数字；趋势图默认 7 天，避免首屏加载过多。</p></div>',
+  apikeys: '<div class="note"><h4><span class="pageno">03 · </span>密钥列表</h4></div><div class="note"><h4>页面目标</h4><p>让用户在一屏内看清所有密钥的归属、环境与健康状态，并把高频操作放在手边。</p></div><div class="note"><h4>核心功能</h4><ul><li>密钥卡片：服务商 / 环境 / 标签 / 状态</li><li>默认掩码展示，按需点击"显示"</li><li>按环境与关键词筛选</li><li>复制、显示、详情三项常用操作</li></ul></div><div class="note"><h4>用户操作</h4><ul><li>添加 / 导入密钥</li><li>复制掩码密文（需二次确认）</li><li>点击卡片进入密钥详情</li></ul></div><div class="note"><h4>设计说明</h4><p>列表默认不展示明文，复制与显示都计入活动日志；"待轮换"用琥珀色而非红色，避免与"已泄露"同级告警。</p></div>',
+  addkey: '<div class="note"><h4><span class="pageno">04 · </span>添加密钥</h4></div><div class="note"><h4>页面目标</h4><p>把"新建一个密钥"的成本压到最低，同时让用户确信输入的内容会立刻被加密。</p></div><div class="note"><h4>核心功能</h4><ul><li>服务商快速选择（自动带出地址）</li><li>必填校验：名称 + Key</li><li>环境 / 状态 / 标签 / 备注</li><li>保存前检查清单</li></ul></div><div class="note"><h4>用户操作</h4><ul><li>点选服务商 → 填写名称与 Key</li><li>选择环境与状态</li><li>保存后回到列表并写入活动日志</li></ul></div><div class="note"><h4>设计说明</h4><p>Key 输入框即时掩码，配合"保存前检查"在右栏实时反馈，避免提交后才发现错误；环境只有生产 / 测试两项，与列表筛选保持一致。</p></div>',
+  keydetail: '<div class="note"><h4><span class="pageno">05 · </span>密钥详情</h4></div><div class="note"><h4>页面目标</h4><p>围绕单个密钥提供"看状态、看用量、看历史、做操作"的完整闭环，减少来回切换。</p></div><div class="note"><h4>核心功能</h4><ul><li>密钥头部：掩码 + 状态 + 四项操作</li><li>元数据表（服务商 / 环境 / 创建 / 最近使用）</li><li>近 7 天真实调用分布</li><li>该密钥的活动记录，可下钻请求详情</li></ul></div><div class="note"><h4>用户操作</h4><ul><li>复制 / 显示（均记入审计）</li><li>轮换：生成新 Key 并保留历史</li><li>删除：进入二次确认弹窗</li></ul></div><div class="note"><h4>设计说明</h4><p>删除用红色但置于操作区末位，且与"轮换"相邻，避免误触；请求行可跳转到请求详情，形成"密钥 → 请求 → 响应"的下钻路径。</p></div>',
+  playground: '<div class="note"><h4><span class="pageno">06 · </span>测试台</h4></div><div class="note"><h4>页面目标</h4><p>让"保管"与"使用"连起来：不离开保险库就能验证一个 Key 是否可用，并顺手产生真实用量数据。</p></div><div class="note"><h4>核心功能</h4><ul><li>选择密钥 + 方法 + 地址</li><li>鉴权头自动注入，不暴露明文</li><li>请求体编辑与发送</li><li>响应状态码、耗时、体积与内容</li></ul></div><div class="note"><h4>用户操作</h4><ul><li>选择密钥 → 填写请求体 → 发送</li><li>复制响应或下钻请求详情</li><li>请求自动写入用量与活动日志</li></ul></div><div class="note"><h4>设计说明</h4><p>左请求右响应的分栏是开发者最熟悉的形态；鉴权头以掩码显示并标注"自动注入"，直接回应"明文会不会泄露"的最大顾虑。</p></div>',
+  usage: '<div class="note"><h4><span class="pageno">07 · </span>用量分析</h4></div><div class="note"><h4>页面目标</h4><p>把本地记录的真实调用变成可读的消耗视图，回答"哪个 Key、哪个服务商用得最多、稳不稳"。</p></div><div class="note"><h4>核心功能</h4><ul><li>四项用量指标 + 时间范围切换</li><li>近 7 天请求趋势</li><li>服务商维度：请求 / 失败 / 耗时</li><li>按密钥排行并可下钻</li></ul></div><div class="note"><h4>用户操作</h4><ul><li>切换今日 / 7天 / 30天</li><li>点击服务商或密钥查看明细</li><li>发现异常失败率后回到密钥页轮换</li></ul></div><div class="note"><h4>设计说明</h4><p>数据全部来自 用量日志，演示数据会显式标记；趋势用柱状而非折线，强调"每天多少次"这类可计数事实。</p></div>',
+  security: '<div class="note"><h4><span class="pageno">08 · </span>安全中心</h4></div><div class="note"><h4>页面目标</h4><p>把"我的密钥现在安全吗"变成可打分、可逐项处理的清单，而不是一句口号。</p></div><div class="note"><h4>核心功能</h4><ul><li>安全评分与趋势</li><li>安全检查清单（通过 / 待处理 / 建议）</li><li>风险检测列表，可直达处理</li><li>密钥轮换表与状态</li></ul></div><div class="note"><h4>用户操作</h4><ul><li>查看扣分原因并逐项修复</li><li>对超期密钥发起轮换</li><li>跳转到设置补齐手势解锁</li></ul></div><div class="note"><h4>设计说明</h4><p>轮换流程明确写出"不会替你修改第三方平台"，把平台边界讲清楚；风险分级用琥珀 / 红两档，避免所有问题都报红。</p></div>',
+  activity: '<div class="note"><h4><span class="pageno">09 · </span>活动日志</h4></div><div class="note"><h4>页面目标</h4><p>提供可追溯的审计视角：谁在什么时间对哪个密钥做了什么，全部来自本机日志。</p></div><div class="note"><h4>核心功能</h4><ul><li>按密钥 / 请求 / 安全 / 系统分类筛选</li><li>时间、分类、事件、详情、来源五列</li><li>请求类事件可下钻到请求详情</li><li>超出留存期自动清理</li></ul></div><div class="note"><h4>用户操作</h4><ul><li>切换分类快速定位事件</li><li>查看请求耗时与状态码</li><li>回溯复制、解锁等敏感动作</li></ul></div><div class="note"><h4>设计说明</h4><p>日志只存元数据不存明文密钥；"来源"列固定为本机，强化本地优先的定位，也避免误以为有云端同步。</p></div>',
+  settings: '<div class="note"><h4><span class="pageno">10 · </span>设置</h4></div><div class="note"><h4>页面目标</h4><p>把安全策略与数据策略交给用户，让"本地优先"这条原则在配置层面可感知、可控制。</p></div><div class="note"><h4>核心功能</h4><ul><li>修改主密码 / 手势快捷解锁</li><li>用量与活动记录开关</li><li>数据留存周期（7天 / 30天 / 90天 / 1年）</li><li>演示数据开关、主题切换、危险操作</li></ul></div><div class="note"><h4>用户操作</h4><ul><li>开启或关闭各类记录</li><li>调整日志留存，控制本地占用</li><li>切换主题；必要时重置全部数据</li></ul></div><div class="note"><h4>设计说明</h4><p>记录类开关默认开启，因为用量与活动是产品价值来源；危险操作单独成卡并红色描边，与常规设置明确区隔。</p></div>',
+  empty: '<div class="note"><h4><span class="pageno">11 · </span>空状态</h4></div><div class="note"><h4>页面目标</h4><p>把"什么都没有"变成引导下一步的入口，而不是让用户对着空白页发呆。</p></div><div class="note"><h4>核心功能</h4><ul><li>首次使用：暂无数据 + 添加 API Key</li><li>搜索无结果：清除筛选</li><li>活动为空：引导去测试台产生真实请求</li></ul></div><div class="note"><h4>用户操作</h4><ul><li>添加第一个密钥</li><li>清除筛选条件</li><li>前往测试台发起请求</li></ul></div><div class="note"><h4>设计说明</h4><p>空状态不使用假数据填充；三类空态文案分别对应"还没开始 / 条件太窄 / 尚未产生"，只给一个主行动，避免选择过载。</p></div>',
+  requestdetail: '<div class="note"><h4><span class="pageno">13 · </span>请求详情</h4></div><div class="note"><h4>页面目标</h4><p>把一次调用拆开看：慢在哪、返回了什么，让排查不需要借助外部工具。</p></div><div class="note"><h4>核心功能</h4><ul><li>方法与地址、状态码、所用密钥</li><li>时序拆解：DNS / TLS / TTFB / 总计</li><li>请求体与响应体对照</li><li>响应体积与 token 用量</li></ul></div><div class="note"><h4>用户操作</h4><ul><li>从活动或用量页下钻进来</li><li>对照请求体定位失败原因</li><li>返回上层继续排查</li></ul></div><div class="note"><h4>设计说明</h4><p>响应体不落库原文，只保留体积与摘要，兼顾排查价值与本地存储成本；时序用同一量纲的条形图，避免误读相对快慢。</p></div>',
+};
+
+/* ===== 状态 ===== */
+let state = { view: 'dashboard', locked: true, notes: false };
+
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+
+function svg(name){ return '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'+(ICONS[name]||'')+'</svg>'; }
+
+function renderSidebar(){
+  const sb = $('#sidebar');
+  let html = '<div class="brand"><div class="logo">'+svg('keys')+'</div><div><div class="name">KeyVault</div><div class="sub">本地优先 · 密钥管理</div></div></div>';
+  const groups = []; const map = {};
+  PAGES.forEach(p=>{ if(!map[p.group]){map[p.group]=[];groups.push(p.group);} map[p.group].push(p); });
+  groups.forEach(g=>{
+    html += '<div class="nav-group"><div class="label">'+g+'</div>';
+    map[g].forEach(p=>{
+      html += '<a class="nav-item" data-nav="'+p.id+'">'+svg(p.icon)+'<span>'+p.title+'</span></a>';
+    });
+    html += '</div>';
+  });
+  html += '<div class="sidebar-foot"><div class="vault-status"><span class="dot"></span>已加密</div><div class="vault-status" style="color:var(--faint)">导出</div></div>';
+  sb.innerHTML = html;
+}
+
+function setTitle(view){
+  const p = PAGES.find(x=>x.id===view);
+  if(p){ $('#ht').textContent = p.title; $('#hsub').textContent = p.sub; }
+  else { $('#ht').textContent = VIEW_TITLE[view]||view; $('#hsub').textContent = VIEW_SUB[view]||''; }
+}
+
+function showNotes(view){
+  $('#notesBody').innerHTML = NOTES[view] || '';
+}
+
+function go(view){
+  state.view = view;
+  $$('.view').forEach(v=> v.hidden = (v.dataset.view !== view));
+  $$('.nav-item').forEach(n=> n.classList.toggle('active', n.dataset.nav === view));
+  setTitle(view);
+  showNotes(view);
+  $('#content').scrollTop = 0;
+}
+
+function unlock(){
+  state.locked = false;
+  $('#lock-screen').hidden = true;
+  $('#lockNotes').hidden = true;
+  $('#app-shell').hidden = false;
+  renderSidebar();
+  go(state.view || 'dashboard');
+}
+
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(t._t); t._t = setTimeout(()=> t.hidden = true, 1800);
+}
+
+/* ===== 事件委托 ===== */
+document.addEventListener('click', (e)=>{
+  const t = e.target.closest('[data-nav],[data-goto],[data-toggle],[data-seg],[data-toast],[data-reveal],[data-action],[data-retention],[data-cat]');
+  if(!t) return;
+
+  if(t.dataset.nav){ go(t.dataset.nav); return; }
+  if(t.dataset.goto){ go(t.dataset.goto); return; }
+  if(t.dataset.toast){ toast(t.dataset.toast); return; }
+
+  if(t.dataset.toggle){ t.classList.toggle('on'); return; }
+
+  if(t.dataset.seg){ // 同组内单选
+    const grp = t.dataset.seg;
+    $$('[data-seg="'+grp+'"]').forEach(o=> o.classList.toggle('on', o===t));
+    return;
+  }
+  if(t.dataset.retention){
+    $$('[data-retention]').forEach(o=> o.classList.toggle('on', o===t));
+    toast('留存周期：'+t.textContent.trim()+'（演示）'); return;
+  }
+  if(t.dataset.cat){
+    $$('.act-chip').forEach(c=> c.classList.toggle('on', c===t));
+    const cat = t.dataset.cat;
+    $$('#activityTable tr[data-cat]').forEach(r=>{
+      r.style.display = (cat==='全部' || r.dataset.cat===cat) ? '' : 'none';
+    });
+    return;
+  }
+  if(t.dataset.reveal){
+    const m = t.closest('.keycard, [data-view="keydetail"]');
+    const masked = m && m.querySelector('.masked');
+    if(masked){ masked.textContent = (masked.textContent.indexOf('•')>=0) ? 'sk-7f3a9c2e8b1d4f6a3c5e0a9b2d1f8c4e3b6a7d2' : 'sk-••••••••••••3fA2'; }
+    return;
+  }
+  if(t.dataset.action === 'delete-key'){ openDelete(); return; }
+});
+
+/* 解锁 */
+$('#unlockBtn').addEventListener('click', unlock);
+$('#pwInput').addEventListener('keydown', e=>{ if(e.key==='Enter') unlock(); });
+
+/* 注释开关 */
+$('#notesToggle').addEventListener('click', ()=>{
+  state.notes = !state.notes;
+  $('#notesPanel').hidden = !state.notes;
+  $('#notesToggle').classList.toggle('primary', state.notes);
+});
+
+/* 密钥搜索 */
+$('#keySearch') && $('#keySearch').addEventListener('input', e=>{
+  const q = e.target.value.trim().toLowerCase();
+  $$('#keyList .keycard').forEach(c=>{
+    c.style.display = (!q || c.textContent.toLowerCase().includes(q)) ? '' : 'none';
+  });
+});
+/* 清除筛选（空状态页） */
+$('#clearFilter') && $('#clearFilter').addEventListener('click', ()=> go('apikeys'));
+
+/* 测试台发送 */
+$('#sendBtn') && $('#sendBtn').addEventListener('click', ()=>{
+  $('#respMeta').textContent = '200 OK · 1.24s · 512 B';
+  $('#sendBtn').textContent = '已发送 ✓';
+  toast('请求已发送并记录（演示）');
+});
+
+/* 保存密钥 */
+$('#saveKeyBtn') && $('#saveKeyBtn').addEventListener('click', ()=>{
+  toast('已保存（演示）'); setTimeout(()=> go('apikeys'), 500);
+});
+
+/* 删除弹窗 */
+function openDelete(){ $('#deleteModal').hidden = false; $('#confirmName').value=''; $('#confirmDelete').disabled = true; }
+$('#cancelDelete').addEventListener('click', ()=> $('#deleteModal').hidden = true);
+$('#confirmName').addEventListener('input', e=>{
+  $('#confirmDelete').disabled = (e.target.value.trim() !== 'OpenAI 生产主密钥');
+});
+$('#confirmDelete').addEventListener('click', ()=>{
+  $('#deleteModal').hidden = true; toast('已删除（演示，未真正移除）');
+});
+$('#deleteModal').addEventListener('click', e=>{ if(e.target.id==='deleteModal') $('#deleteModal').hidden = true; });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') $('#deleteModal').hidden = true; });
+
+/* ===== URL 参数（供导出脚本驱动） ===== */
+(function initFromURL(){
+  const p = new URLSearchParams(location.search);
+  if(p.get('locked')==='1'){ state.locked = true; }
+  else if(p.get('view')){ state.locked = false; state.view = p.get('view'); }
+  else { state.locked = true; } // 默认用户体验：先解锁
+
+  state.notes = (p.get('notes')==='1');
+
+  if(state.locked){
+    $('#lock-screen').hidden = false; $('#app-shell').hidden = true;
+    if(state.notes){ $('#lockNotesBody').innerHTML = NOTES.locked; $('#lockNotes').hidden = false; }
+  } else {
+    $('#lock-screen').hidden = true; $('#app-shell').hidden = false;
+    renderSidebar();
+    go(state.view);
+  }
+  $('#notesPanel').hidden = !state.notes;
+  if(state.notes) $('#notesToggle').classList.add('primary');
+  if(p.get('modal')==='delete'){ renderSidebar(); go('keydetail'); openDelete(); }
+})();
+</script>
+</body>
+</html>

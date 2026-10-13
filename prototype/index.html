@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1100">
+<title>KeyVault AI · 低保真原型（深色 · 中文 · 可交互）</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  body{font-family:var(--font)}
+  .wrap{max-width:1100px;margin:0 auto;padding:56px 24px 60px}
+  h1{font-size:30px;letter-spacing:-.02em;margin:0 0 10px}
+  .lead{color:var(--muted);font-size:15px;max-width:720px;line-height:1.7}
+  .cta{display:inline-flex;align-items:center;gap:8px;margin:22px 0 36px;height:46px;padding:0 22px;background:var(--accent);color:var(--fg-accent);border-radius:var(--radius-sm);font-weight:600;font-size:15px;text-decoration:none}
+  .cta:hover{background:#fff}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+  .card .no{font-size:11px;color:var(--faint)}
+  .card .nm{font-weight:600;font-size:15px;margin:4px 0 6px}
+  .card .ds{font-size:12.5px;color:var(--muted)}
+  .card a{color:inherit;text-decoration:none;display:block}
+  .card a:hover .nm{color:#fff}
+  .flow .card{padding:22px}
+  .flow svg{width:100%;height:auto}
+  table.tbl th{color:var(--faint)} table.tbl td{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>KeyVault AI · 低保真原型</h1>
+  <p class="lead">13 屏线框稿，深色主题，界面文案与桌面端 exe 保持一致，字体与加密 App 完全一致。下方为<strong>可交互</strong>版本：输入任意密码解锁后，可点击左侧导航在 13 个页面间切换，设置开关、删除确认弹窗、测试台发送、搜索筛选均可点击体验。</p>
+  <a class="cta" href="app.html">打开可交互原型 →</a>
+
+  <div class="flow" style="margin-bottom:30px">
+    <div class="card">
+      <div class="card-title">用户流程</div>
+      <svg viewBox="0 0 1000 90" preserveAspectRatio="none" style="height:90px">
+        <g fill="#18181B" stroke="#33333A">
+          <rect x="10" y="22" width="150" height="46" rx="8"/><rect x="200" y="22" width="150" height="46" rx="8"/>
+          <rect x="390" y="22" width="150" height="46" rx="8"/><rect x="580" y="22" width="150" height="46" rx="8"/>
+          <rect x="770" y="22" width="150" height="46" rx="8"/>
+        </g>
+        <g stroke="#6B6B72" stroke-width="1.5" fill="none"><path d="M160 45h36M350 45h36M540 45h36M730 45h36"/></g>
+        <g fill="#A0A0A0" font-size="13" font-family="sans-serif" text-anchor="middle">
+          <text x="85" y="52">01 解锁</text><text x="275" y="52">02 总览</text><text x="465" y="52">03 密钥</text>
+          <text x="655" y="52">06 测试台</text><text x="845" y="52">07 用量</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card"><a href="app.html?locked=1"><div class="no">01</div><div class="nm">解锁</div><div class="ds">主密码 / 手势解锁，数据不出本机</div></a></div>
+    <div class="card"><a href="app.html?view=dashboard"><div class="no">02</div><div class="nm">总览</div><div class="ds">密钥、请求、安全评分一屏可见</div></a></div>
+    <div class="card"><a href="app.html?view=apikeys"><div class="no">03</div><div class="nm">密钥</div><div class="ds">掩码列表、环境与状态筛选</div></a></div>
+    <div class="card"><a href="app.html?view=addkey"><div class="no">04</div><div class="nm">添加密钥</div><div class="ds">表单校验与保存前检查</div></a></div>
+    <div class="card"><a href="app.html?view=keydetail"><div class="no">05</div><div class="nm">密钥详情</div><div class="ds">元数据、近 7 天调用、活动</div></a></div>
+    <div class="card"><a href="app.html?view=playground"><div class="no">06</div><div class="nm">测试台</div><div class="ds">发起真实请求并自动记账</div></a></div>
+    <div class="card"><a href="app.html?view=usage"><div class="no">07</div><div class="nm">用量</div><div class="ds">趋势、Provider 与密钥排行</div></a></div>
+    <div class="card"><a href="app.html?view=security"><div class="no">08</div><div class="nm">安全中心</div><div class="ds">评分、检查清单、密钥轮换</div></a></div>
+    <div class="card"><a href="app.html?view=activity"><div class="no">09</div><div class="nm">活动</div><div class="ds">按分类筛选的本地审计日志</div></a></div>
+    <div class="card"><a href="app.html?view=settings"><div class="no">10</div><div class="nm">设置</div><div class="ds">主密码、记录开关、留存与主题</div></a></div>
+    <div class="card"><a href="app.html?view=empty"><div class="no">11</div><div class="nm">空状态</div><div class="ds">暂无数据 / 无结果 / 无活动</div></a></div>
+    <div class="card"><a href="app.html?view=keydetail&modal=delete"><div class="no">12</div><div class="nm">删除确认</div><div class="ds">输入名称二次确认的不可逆操作</div></a></div>
+    <div class="card"><a href="app.html?view=requestdetail"><div class="no">13</div><div class="nm">请求详情</div><div class="ds">时序拆解与请求响应对照</div></a></div>
+  </div>
+
+  <div class="flow" style="margin-top:30px">
+    <div class="card">
+      <div class="card-title">设计系统（深色）</div>
+      <table class="tbl">
+        <thead><tr><th>用途</th><th>色值</th><th>说明</th></tr></thead>
+        <tr><td>画板底色</td><td style="font-family:var(--mono)">#0B0B0D</td><td style="color:var(--muted)">页面背景，接近 exe 深色底</td></tr>
+        <tr><td>侧栏 / 次级面</td><td style="font-family:var(--mono)">#141417</td><td style="color:var(--muted)">导航区与输入框底</td></tr>
+        <tr><td>卡片 / 应用面</td><td style="font-family:var(--mono)">#18181B</td><td style="color:var(--muted)">内容承载面</td></tr>
+        <tr><td>描边</td><td style="font-family:var(--mono)">#26262B / #33333A</td><td style="color:var(--muted)">常规 / 强描边</td></tr>
+        <tr><td>文字</td><td style="font-family:var(--mono)">#EAEAEA / #A0A0A0 / #6B6B72</td><td style="color:var(--muted)">主 / 次 / 弱化三级</td></tr>
+        <tr><td>语义色</td><td style="font-family:var(--mono)">#7A8B6E / #C9A86F / #B8786F</td><td style="color:var(--muted)">通过 / 待处理 / 危险</td></tr>
+        <tr><td>字体</td><td style="font-family:var(--mono)">系统栈</td><td style="color:var(--muted)">与 exe 一致：Segoe UI / 微软雅黑</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+</body>
+</html>

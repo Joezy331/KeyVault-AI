@@ -1,0 +1,180 @@
+/* ============================================================
+   KeyVault AI — 作品集产品流程图 · 浅色编辑风设计系统
+   Minimal / Editorial / Quiet Developer Tool
+   复用原型设计语言：字体栈 · 圆角 · 间距 · 卡片风格
+   ============================================================ */
+
+:root {
+  --bg:        #F6F4EF;   /* 背景 */
+  --card:      #FFFFFF;   /* 卡片 */
+  --card-soft: #FCFAF6;   /* 三级节点底 */
+  --text:      #1F1F1D;   /* 主文字 */
+  --muted:     #6F6C66;   /* 次文字 */
+  --border:    #E4E0D8;   /* 边框 */
+  --border-mid:#B8AFA2;   /* 一级节点描边 */
+  --border-lt: #ECE7DE;   /* 三级节点描边 */
+  --accent:    #B5764A;   /* 低饱和暖陶土色（核心闭环强调） */
+  --accent-soft:#F0E6DC;
+  --edge:      #CFC8BC;   /* 普通连线 */
+  --edge-lt:   #E0D9CD;   /* 细分支连线 */
+  --radius:    10px;
+  --radius-sm: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 28px 80px; }
+
+/* ---------- Hero ---------- */
+.hero { padding: 72px 0 36px; max-width: 760px; }
+.hero .kicker {
+  font-size: 12px; letter-spacing: .14em; color: var(--accent);
+  font-weight: 600; text-transform: uppercase;
+}
+.hero h1 { font-size: 40px; line-height: 1.08; letter-spacing: -.02em; margin: 14px 0 12px; }
+.hero .sub { font-size: 17px; color: var(--muted); margin: 0 0 22px; }
+.hero .tagline {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: 13.5px; color: var(--text);
+  border: 1px solid var(--border); background: var(--card);
+  border-radius: 999px; padding: 8px 16px; font-weight: 500;
+}
+.hero .tagline b { color: var(--accent); font-weight: 600; }
+
+/* ---------- Section ---------- */
+.section { margin-top: 56px; }
+.section-head { margin-bottom: 18px; border-top: 1px solid var(--border); padding-top: 18px; }
+.section-head .no { font-size: 12px; letter-spacing: .12em; color: var(--accent); font-weight: 600; }
+.section-head h2 { font-size: 23px; letter-spacing: -.01em; margin: 6px 0 4px; }
+.section-head p { font-size: 14px; color: var(--muted); margin: 0; max-width: 720px; }
+
+/* ---------- 图容器（横向溢出可滚动，便于小屏阅读；截图时容器即图本身） ---------- */
+.flow-scroll { overflow-x: auto; padding: 8px 0 4px; }
+.flow-canvas {
+  position: relative;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(31,31,29,.04) 1px, transparent 0) 0 0 / 22px 22px,
+    var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin: 0 auto;
+}
+
+/* ---------- 连线层 ---------- */
+.flow-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+.flow-edge-label { fill: var(--muted); font-size: 11px; font-family: var(--font); }
+
+/* ---------- 分区标签 ---------- */
+.flow-zone {
+  position: absolute; z-index: 0;
+  display: flex; align-items: baseline; gap: 8px;
+  color: var(--border-mid); pointer-events: none;
+}
+.flow-zone .zn { font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--accent); }
+.flow-zone .zt { font-size: 13px; font-weight: 600; letter-spacing: .12em; color: #B8AFA2; }
+
+/* ---------- 节点 ---------- */
+.flow-node {
+  position: absolute; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; text-decoration: none; color: var(--text);
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.flow-node .nl { line-height: 1.2; }
+.flow-node .ns { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.25; }
+
+.flow-node.lv1 { border: 1.5px solid var(--border-mid); box-shadow: 0 1px 3px rgba(31,31,29,.07); }
+.flow-node.lv1 .nl { font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+
+.flow-node.lv2 { border: 1px solid var(--border); }
+.flow-node.lv2 .nl { font-size: 14px; font-weight: 600; }
+
+.flow-node.lv3 { border: 1px solid var(--border-lt); background: var(--card-soft); }
+.flow-node.lv3 .nl { font-size: 12.5px; font-weight: 500; color: var(--muted); }
+
+/* ---------- 逻辑流程图（经典判定式样式） ---------- */
+.flow-node.lg-title {
+  background: linear-gradient(90deg, #7B6CF6, #A78BFA);
+  border: none; border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(123,108,246,.28);
+}
+.flow-node.lg-title .nl { color: #fff; font-size: 16px; font-weight: 700; letter-spacing: .08em; }
+
+.flow-node.lg-pill { background: #EFEDFC; border: 1.5px solid #8B85F5; border-radius: 999px; }
+.flow-node.lg-pill .nl { color: #5B57D9; font-weight: 700; font-size: 13.5px; }
+
+.flow-node.lg-proc { background: #EAF3FB; border: 1px solid #9DBFDD; }
+.flow-node.lg-proc .nl { color: #2C5A85; font-size: 13px; font-weight: 600; }
+
+.flow-node.lg-side { background: #F3F8FC; border: 1px dashed #9DBFDD; }
+.flow-node.lg-side .nl { color: #4A76A3; font-size: 12.5px; font-weight: 500; }
+
+.flow-node.shape-diamond { background: transparent; border: none; }
+.flow-node.shape-diamond .nl { color: #8A4E28; font-size: 12.5px; font-weight: 600; padding: 0 12px; }
+.flow-node.shape-diamond:hover { transform: none; box-shadow: none; border-color: transparent; }
+
+.flow-node:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+  box-shadow: 0 6px 18px rgba(181,118,74,.16);
+  z-index: 3;
+}
+.flow-node.lv3:hover .nl { color: var(--text); }
+
+/* ---------- Tooltip ---------- */
+.flow-tip {
+  position: fixed; z-index: 999; max-width: 264px;
+  background: var(--text); color: var(--bg);
+  padding: 10px 12px; border-radius: var(--radius-sm);
+  box-shadow: 0 10px 30px rgba(31,31,29,.28);
+  font-size: 12.5px; line-height: 1.5;
+  opacity: 0; pointer-events: none; transition: opacity .12s ease;
+}
+.flow-tip strong { display: block; font-size: 13px; margin-bottom: 3px; color: #fff; }
+.flow-tip span { color: #D9D2C8; }
+
+/* ---------- 图例 ---------- */
+.legend {
+  display: flex; flex-wrap: wrap; gap: 18px; align-items: center;
+  margin-top: 16px; padding: 14px 18px;
+  border: 1px solid var(--border); background: var(--card); border-radius: var(--radius);
+  font-size: 12.5px; color: var(--muted);
+}
+.legend .item { display: flex; align-items: center; gap: 8px; }
+.legend .sw { width: 22px; height: 14px; border-radius: 4px; border: 1px solid var(--border); background: var(--card); }
+.legend .sw.l1 { border: 1.5px solid var(--border-mid); height: 18px; }
+.legend .sw.l2 { border: 1px solid var(--border); height: 16px; }
+.legend .sw.l3 { border: 1px solid var(--border-lt); background: var(--card-soft); height: 14px; }
+.legend .sw.pill { border-radius: 999px; background: #EFEDFC; border: 1.5px solid #8B85F5; }
+.legend .sw.proc { background: #EAF3FB; border: 1px solid #9DBFDD; }
+.legend .sw.dia { width: 15px; height: 15px; transform: rotate(45deg); background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 2px; margin: 0 4px; }
+.legend .ln.d { width: 26px; height: 0; border-top: 1.6px dashed var(--edge); }
+.legend .ln { width: 26px; height: 0; border-top: 2.6px solid var(--accent); }
+.legend .ln.n { border-top: 1.6px solid var(--edge); }
+.legend .ln.d { width: 26px; height: 0; border-top: 1.6px dashed var(--edge); }
+
+/* ---------- 页脚 ---------- */
+.foot { margin-top: 64px; padding-top: 22px; border-top: 1px solid var(--border); color: var(--muted); font-size: 13px; }
+.foot a { color: var(--accent); }
+
+@media (max-width: 760px){
+  .hero h1 { font-size: 30px; }
+  .wrap { padding: 0 18px 60px; }
+}
